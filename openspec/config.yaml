@@ -7,7 +7,7 @@ context: |
   Patterns: RSC por defecto, client components solo cuando hay interactividad. Composición Base UI vía prop `render`, nunca `asChild`.
   Testing: no test runner configurado aún.
 
-strict_tdd: false
+strict_tdd: true
 
 rules:
   proposal:
@@ -28,23 +28,22 @@ rules:
     - Load relevant coding skills for the project stack
     - Base UI: use `render={<Element />}`, never `asChild`
   verify:
-    - Run lint (pnpm lint) and tsc as no test runner exists
-    - Compare implementation against every spec scenario
+    - Run `pnpm lint`, `pnpm typecheck`, and `pnpm test` as required gates
+    - Compare implementation against every spec scenario with runtime test evidence
   archive:
     - Warn before merging destructive deltas (large removals)
 
 testing:
-  strict_tdd: false
-  reason: "No test runner installed (no vitest/jest in package.json)"
+  strict_tdd: true
   test_runner:
-    framework: none
-    command: null
+    framework: vitest
+    command: "pnpm test"
   layers:
-    unit: { available: false, tool: null }
-    integration: { available: false, tool: null }
+    unit: { available: true, tool: vitest }
+    integration: { available: true, tool: "@testing-library/react" }
     e2e: { available: false, tool: null }
-  coverage: { available: false, command: null }
+  coverage: { available: true, command: "pnpm test:coverage" }
   quality:
     linter: { available: true, command: "pnpm lint" }
-    type_checker: { available: true, command: "pnpm exec tsc --noEmit" }
+    type_checker: { available: true, command: "pnpm typecheck" }
     formatter: { available: false, command: null }
