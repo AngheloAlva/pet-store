@@ -80,7 +80,7 @@ vi.mock("@/components/ui/map", async () => {
 });
 
 import { StoreLocator } from "./store-locator";
-import { stores } from "@/data";
+import { stores } from "@/test/fixtures";
 
 beforeEach(() => {
   flyToMock.mockClear();

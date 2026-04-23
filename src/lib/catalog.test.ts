@@ -1,4 +1,21 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { products, brands, categories } from "@/test/fixtures";
+
+// Mock @/db/loaders so sync cache getters return fixture data without a DB.
+vi.mock("@/db/loaders", () => ({
+  loadAllProducts: vi.fn(async () => products),
+  loadAllBrands: vi.fn(async () => brands),
+  loadAllCategories: vi.fn(async () => categories),
+  loadAllStores: vi.fn(async () => []),
+  loadAllStockLevels: vi.fn(async () => []),
+  getCachedProducts: vi.fn(() => products),
+  getCachedBrands: vi.fn(() => brands),
+  getCachedCategories: vi.fn(() => categories),
+  getCachedStores: vi.fn(() => []),
+  getCachedStockLevels: vi.fn(() => []),
+  initSyncCache: vi.fn(async () => {}),
+}));
+
 import {
   PAGE_SIZE,
   getCategoryBreadcrumb,
@@ -11,7 +28,6 @@ import {
   getAllProductSlugs,
 } from "./catalog";
 import { parseCatalogQuery } from "./url-params";
-import { products } from "@/data";
 
 const emptyQuery = () => parseCatalogQuery({});
 

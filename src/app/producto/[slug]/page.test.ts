@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { products } from "@/data";
+import { products } from "@/test/fixtures";
 
 // Mock next/navigation for notFound() tests.
 vi.mock("next/navigation", () => ({

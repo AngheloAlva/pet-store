@@ -1,4 +1,40 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { stores, getStockLevel } from "@/test/fixtures";
+import type { Store, StockLevel } from "@/types";
+
+// Build stock level rows from fixture helper (mirrors seed logic).
+function makeStockLevels(variantId: string): (StockLevel & { store: Store })[] {
+  return stores.map((store) => ({
+    ...getStockLevel(variantId, store.id),
+    store,
+  }));
+}
+
+// Build a full cache: all variants x all stores used in tests.
+const fixtureStockLevels = [
+  ...makeStockLevels("rc-ma-3"),
+  ...makeStockLevels("rc-ma-15"),
+];
+
+// Mock @/db/loaders — getCachedStockLevels returns fixture data by default.
+vi.mock("@/db/loaders", () => {
+  const fixtureStockLevelsRef: (StockLevel & { store: Store })[] = [];
+  return {
+    loadAllStockLevels: vi.fn(async () => fixtureStockLevelsRef),
+    loadAllProducts: vi.fn(async () => []),
+    loadAllBrands: vi.fn(async () => []),
+    loadAllCategories: vi.fn(async () => []),
+    loadAllStores: vi.fn(async () => []),
+    getCachedStockLevels: vi.fn(() => fixtureStockLevelsRef),
+    getCachedProducts: vi.fn(() => []),
+    getCachedBrands: vi.fn(() => []),
+    getCachedCategories: vi.fn(() => []),
+    getCachedStores: vi.fn(() => []),
+    initSyncCache: vi.fn(async () => {}),
+  };
+});
+
+import * as loadersMock from "@/db/loaders";
 import {
   getProductStockMatrix,
   getProductStockMatrixAsync,
@@ -7,8 +43,20 @@ import {
   isVariantGloballyOutOfStock,
   isVariantGloballyOutOfStockAsync,
 } from "./stock";
-import { stores } from "@/data";
-import * as stockData from "@/data/stock";
+
+// Helper: set what getCachedStockLevels and loadAllStockLevels return.
+function setStockLevels(levels: (StockLevel & { store: Store })[]) {
+  vi.mocked(loadersMock.getCachedStockLevels).mockReturnValue(levels);
+  vi.mocked(loadersMock.loadAllStockLevels).mockResolvedValue(levels);
+}
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  setStockLevels(fixtureStockLevels);
+});
+
+// Set fixture data before each test group.
+setStockLevels(fixtureStockLevels);
 
 describe("getProductStockMatrix (sync)", () => {
   it("returns one row per store", () => {
@@ -59,27 +107,29 @@ describe("isVariantGloballyOutOfStock (sync)", () => {
 
   describe("true branch (synthetic: every store out_of_stock)", () => {
     afterEach(() => {
-      vi.restoreAllMocks();
+      setStockLevels(fixtureStockLevels);
     });
 
     it("returns true when every store reports out_of_stock", () => {
-      vi.spyOn(stockData, "getStockLevel").mockImplementation(
-        (variantId, storeId) => ({
-          variantId,
-          storeId,
-          status: "out_of_stock",
-        }),
+      setStockLevels(
+        stores.map((store) => ({
+          variantId: "synthetic-oos",
+          storeId: store.id,
+          status: "out_of_stock" as const,
+          store,
+        })),
       );
       expect(isVariantGloballyOutOfStock("synthetic-oos")).toBe(true);
     });
 
     it("returns false when at least one store is not out_of_stock", () => {
-      vi.spyOn(stockData, "getStockLevel").mockImplementation(
-        (variantId, storeId) => ({
-          variantId,
-          storeId,
-          status: storeId === stores[0].id ? "in_stock" : "out_of_stock",
-        }),
+      setStockLevels(
+        stores.map((store, i) => ({
+          variantId: "synthetic-mixed",
+          storeId: store.id,
+          status: (i === 0 ? "in_stock" : "out_of_stock") as "in_stock" | "out_of_stock",
+          store,
+        })),
       );
       expect(isVariantGloballyOutOfStock("synthetic-mixed")).toBe(false);
     });
@@ -98,7 +148,7 @@ describe("isVariantGloballyOutOfStockAsync", () => {
 
 describe("getVariantTotalStock (sync)", () => {
   afterEach(() => {
-    vi.restoreAllMocks();
+    setStockLevels(fixtureStockLevels);
   });
 
   it("returns stores.length * 99 when every store is in_stock", () => {
@@ -112,8 +162,13 @@ describe("getVariantTotalStock (sync)", () => {
   });
 
   it("returns 0 when every store is out_of_stock", () => {
-    vi.spyOn(stockData, "getStockLevel").mockImplementation(
-      (variantId, storeId) => ({ variantId, storeId, status: "out_of_stock" }),
+    setStockLevels(
+      stores.map((store) => ({
+        variantId: "synthetic-oos",
+        storeId: store.id,
+        status: "out_of_stock" as const,
+        store,
+      })),
     );
     expect(getVariantTotalStock("synthetic-oos")).toBe(0);
   });

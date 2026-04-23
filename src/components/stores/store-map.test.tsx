@@ -65,7 +65,7 @@ vi.mock("@/components/ui/map", async () => {
 });
 
 import { StoreMap } from "./store-map";
-import { stores } from "@/data";
+import { stores } from "@/test/fixtures";
 
 beforeEach(() => {
   flyToMock.mockClear();

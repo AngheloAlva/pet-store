@@ -1,13 +1,63 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
-import { afterEach } from "vitest";
+import { afterEach, vi } from "vitest";
 
-// jsdom doesn't implement scrollIntoView; stub it so components can call it.
+// ---------------------------------------------------------------------------
+// Global mocks — prevent real DB/network access during tests.
+// ---------------------------------------------------------------------------
+
+// Mock @/db so the Neon connection is never initialised.
+vi.mock("@/db", () => ({
+  db: {
+    query: {
+      products: { findMany: vi.fn(async () => []), findFirst: vi.fn(async () => undefined) },
+      brands: { findMany: vi.fn(async () => []), findFirst: vi.fn(async () => undefined) },
+      categories: { findMany: vi.fn(async () => []), findFirst: vi.fn(async () => undefined) },
+      stores: { findMany: vi.fn(async () => []), findFirst: vi.fn(async () => undefined) },
+      stockLevels: { findMany: vi.fn(async () => []), findFirst: vi.fn(async () => undefined) },
+      productVariants: { findMany: vi.fn(async () => []), findFirst: vi.fn(async () => undefined) },
+      productImages: { findMany: vi.fn(async () => []), findFirst: vi.fn(async () => undefined) },
+    },
+  },
+}));
+
+// Mock @/db/loaders with fixture data so all sync lib helpers work without a DB.
+// Tests that need specific data can override individual functions via vi.mocked().
+vi.mock("@/db/loaders", async () => {
+  const { products, brands, categories, stores, getStockLevel } = await import(
+    "@/test/fixtures/index"
+  );
+  const stockLevels = stores.flatMap((store) =>
+    products.flatMap((product) =>
+      product.variants.map((variant) => ({
+        ...getStockLevel(variant.id, store.id),
+        store,
+      })),
+    ),
+  );
+  return {
+    loadAllProducts: vi.fn(async () => products),
+    loadAllBrands: vi.fn(async () => brands),
+    loadAllCategories: vi.fn(async () => categories),
+    loadAllStores: vi.fn(async () => stores),
+    loadAllStockLevels: vi.fn(async () => stockLevels),
+    getCachedProducts: vi.fn(() => products),
+    getCachedBrands: vi.fn(() => brands),
+    getCachedCategories: vi.fn(() => categories),
+    getCachedStores: vi.fn(() => stores),
+    getCachedStockLevels: vi.fn(() => stockLevels),
+    initSyncCache: vi.fn(async () => {}),
+  };
+});
+
+// ---------------------------------------------------------------------------
+// jsdom polyfills
+// ---------------------------------------------------------------------------
+
 if (typeof Element !== "undefined" && !Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = function () {};
 }
 
-// jsdom doesn't implement matchMedia; stub it so libraries like sonner don't crash.
 if (typeof window !== "undefined" && !window.matchMedia) {
   Object.defineProperty(window, "matchMedia", {
     writable: true,

@@ -1,4 +1,21 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { stores } from "@/test/fixtures";
+
+// Mock @/db/loaders so loaders and sync cache getters return fixture data without a DB.
+vi.mock("@/db/loaders", () => ({
+  loadAllStores: vi.fn(async () => stores),
+  loadAllProducts: vi.fn(async () => []),
+  loadAllBrands: vi.fn(async () => []),
+  loadAllCategories: vi.fn(async () => []),
+  loadAllStockLevels: vi.fn(async () => []),
+  getCachedStores: vi.fn(() => stores),
+  getCachedProducts: vi.fn(() => []),
+  getCachedBrands: vi.fn(() => []),
+  getCachedCategories: vi.fn(() => []),
+  getCachedStockLevels: vi.fn(() => []),
+  initSyncCache: vi.fn(async () => {}),
+}));
+
 import {
   DEFAULT_MAP_VIEWPORT,
   getAllStores,
@@ -8,7 +25,6 @@ import {
   getStoresCommuneSummary,
   STORE_SERVICE_META,
 } from "./stores";
-import { stores } from "@/data";
 
 describe("getAllStores", () => {
   it("returns a Promise resolving to all 4 stores", async () => {

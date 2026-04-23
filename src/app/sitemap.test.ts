@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { products } from "@/data";
+import { products } from "@/test/fixtures";
 import { siteConfig } from "@/lib/site";
 
 // Mock getAllProductSlugs to return data-fixture slugs without hitting a DB.

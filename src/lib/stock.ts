@@ -9,7 +9,7 @@
  * remain synchronous because src/stores/cart.ts (Zustand) calls them sync.
  */
 import type { StockStatus, Store } from "@/types";
-import { loadAllStockLevels, getCachedStockLevels } from "@/db/loaders";
+import { loadAllStockLevels, loadAllStores, getCachedStockLevels, getCachedStores } from "@/db/loaders";
 
 export type StockRow = {
   store: Store;
@@ -28,9 +28,13 @@ export const STATUS_TO_UNITS: Record<StockStatus, number> = {
 
 export async function getProductStockMatrixAsync(variantId: string): Promise<StockRow[]> {
   const stockLevels = await loadAllStockLevels();
-  return stockLevels
-    .filter((sl) => sl.variantId === variantId)
-    .map((sl) => ({ store: sl.store, status: sl.status }));
+  const levels = stockLevels.filter((sl) => sl.variantId === variantId);
+  if (levels.length > 0) {
+    return levels.map((sl) => ({ store: sl.store, status: sl.status }));
+  }
+  // Fall back to in_stock across all stores when no DB records exist for variantId.
+  const allStores = await loadAllStores();
+  return allStores.map((store) => ({ store, status: "in_stock" as const }));
 }
 
 export async function isVariantGloballyOutOfStockAsync(variantId: string): Promise<boolean> {
@@ -49,9 +53,14 @@ export async function getVariantTotalStockAsync(variantId: string): Promise<numb
 // ---------------------------------------------------------------------------
 
 export function getProductStockMatrix(variantId: string): StockRow[] {
-  return getCachedStockLevels()
-    .filter((sl) => sl.variantId === variantId)
-    .map((sl) => ({ store: sl.store, status: sl.status }));
+  const levels = getCachedStockLevels().filter((sl) => sl.variantId === variantId);
+  if (levels.length > 0) {
+    return levels.map((sl) => ({ store: sl.store, status: sl.status }));
+  }
+  // No stock records found — fall back to in_stock across all cached stores.
+  // This preserves the old @/data default behaviour where any unknown variantId
+  // was considered in_stock at every store.
+  return getCachedStores().map((store) => ({ store, status: "in_stock" as const }));
 }
 
 export function isVariantGloballyOutOfStock(variantId: string): boolean {
