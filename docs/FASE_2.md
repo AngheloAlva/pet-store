@@ -12,11 +12,11 @@ En la Fase 1 todo era estático. Ahora se necesita persistencia real:
 
 | Componente | Tecnología | Notas |
 |-----------|------------|-------|
-| Base de datos | PostgreSQL (Supabase o Neon) | Supabase trae auth, storage y realtime incluido |
+| Base de datos | PostgreSQL (Neon) | |
 | ORM | Prisma o Drizzle | Drizzle es más liviano y type-safe |
-| Auth | Auth.js (NextAuth v5) | Login con email/password + Google + RUT para clientes en tienda |
+| Auth (Better Auth) | Login con email/password + Google + RUT para clientes en tienda |
 | Email | Resend | Transaccional: confirmaciones, recordatorios, restock |
-| Storage | Supabase Storage o Cloudflare R2 | Imágenes de productos |
+| Storage | Cloudflare R2 | Imágenes de productos |
 | Cron jobs | Vercel Cron | Recordatorios de citas, emails programados |
 | Estado global | Zustand (se mantiene de Fase 1) | Ahora sincronizado con el backend |
 
@@ -32,7 +32,6 @@ Los seed data de la Fase 1 se convierten en migraciones de Prisma/Drizzle. La es
 **Flujos de auth:**
 - Registro con email + contraseña
 - Login con email + contraseña
-- Login con Google (OAuth)
 - Recuperación de contraseña por email
 - Verificación de email
 
@@ -363,7 +362,7 @@ admin_users (staff con roles)
 
 ## Checklist de Entrega — Fase 2
 
-- [ ] PostgreSQL configurado (Supabase/Neon) con migraciones
+- [ ] PostgreSQL configurado (Neon) con migraciones
 - [ ] Auth funcional (email/password + Google)
 - [ ] Panel admin: CRUD productos, categorías, sucursales
 - [ ] Panel admin: gestión de stock por sucursal
