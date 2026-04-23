@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_MAP_VIEWPORT,
   getStoreBySlug,
+  getStoresByService,
   getStoresCommuneSummary,
   STORE_SERVICE_META,
 } from "./stores";
@@ -39,6 +40,24 @@ describe("getStoresCommuneSummary", () => {
       expect(summary).toContain(store.commune);
     }
     expect(summary).toContain(",");
+  });
+});
+
+describe("getStoresByService", () => {
+  it("returns only stores that offer the pharmacy service", () => {
+    const result = getStoresByService("pharmacy");
+    expect(result).toHaveLength(1);
+    expect(result[0].slug).toBe("las-condes");
+  });
+
+  it("returns all stores that offer the shop service", () => {
+    const result = getStoresByService("shop");
+    expect(result.length).toBe(stores.length);
+  });
+
+  it("preserves seed order", () => {
+    const result = getStoresByService("shop");
+    expect(result.map((s) => s.slug)).toEqual(stores.map((s) => s.slug));
   });
 });
 

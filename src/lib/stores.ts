@@ -27,6 +27,10 @@ export function getStoresCommuneSummary(): string {
   return stores.map((s) => s.commune).join(", ");
 }
 
+export function getStoresByService(service: StoreService): Store[] {
+  return stores.filter((s) => s.services.includes(service));
+}
+
 export type StoreServiceMetaEntry = {
   label: string;
   Icon: PhosphorIcon;
