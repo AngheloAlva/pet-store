@@ -8,11 +8,12 @@ Defines the behavior of `/producto/[slug]`: how a product is rendered, how varia
 
 ### Requirement: Route Resolution and SSG
 
-The system MUST statically prerender one page per product slug in the seed data. Unknown slugs MUST render the 404 page.
+The system MUST statically prerender one page per product slug. `generateStaticParams` MUST call `getAllProductSlugs(): Promise<string[]>` from `src/lib/catalog.ts` to fetch slugs asynchronously. Unknown slugs MUST render the 404 page.
+(Library function returns async; internals currently read from seed data with TODO markers for future Drizzle query swap.)
 
 #### Scenario: Valid slug renders SSR
 
-- GIVEN a product with slug `royal-canin-medium-adult` exists
+- GIVEN a product with slug `royal-canin-medium-adult` exists in the data
 - WHEN a user opens `/producto/royal-canin-medium-adult`
 - THEN the product's gallery, breadcrumb, purchase panel, tabs, and related products render server-side
 
@@ -64,7 +65,8 @@ Clicking a variant toggle MUST update: the displayed price, compareAt strike + d
 
 ### Requirement: Stock Matrix by Store
 
-For each store in the seed data, the PDP MUST show a row with the store name and a status label for the currently selected variant. Status values MUST be one of: "Disponible" (in_stock), "Últimas unidades" (low_stock), "Sin stock" (out_of_stock).
+For each store fetched via `getAllStores()`, the PDP MUST show a row with the store name and a status label for the currently selected variant. Status values MUST be one of: "Disponible" (in_stock), "Últimas unidades" (low_stock), "Sin stock" (out_of_stock).
+(Store and stock data fetched asynchronously; internals currently read from seed data with TODO markers for future Drizzle query swap.)
 
 #### Scenario: Out-of-stock variant in one store
 
@@ -128,3 +130,20 @@ On viewports below the `md` breakpoint the PDP MUST render a sticky bottom bar w
 - GIVEN a mobile viewport
 - WHEN the user taps the sticky "Agregar" button
 - THEN the same cart payload is dispatched as the desktop button
+
+### Requirement: Async Product Data Access
+
+`src/lib/catalog.ts` MUST export `getAllProductSlugs(): Promise<string[]>` backed by async functions that coordinate with the data layer. No file under `src/app/**` MAY query product data directly or import from `src/data/*`.
+(Library function returns async signature; internals currently read from seed data with TODO markers for future Drizzle query swap.)
+
+#### Scenario: getAllProductSlugs returns slug for each product
+
+- GIVEN the data seed with N products
+- WHEN `getAllProductSlugs()` is awaited
+- THEN an array of exactly N slug strings is returned
+
+#### Scenario: Sitemap uses getAllProductSlugs
+
+- GIVEN `src/app/sitemap.ts` imports `getAllProductSlugs` from `src/lib/catalog.ts`
+- WHEN the sitemap is generated at build
+- THEN one entry per product slug is included with no direct data layer imports

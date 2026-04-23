@@ -8,7 +8,8 @@ Defines the behavior of the `/catalogo` page: how products are browsed, filtered
 
 ### Requirement: Default Catalog View
 
-The system MUST render a paginated grid of products at `/catalogo` when no `searchParams` are present.
+The system MUST render a paginated grid of products at `/catalogo` when no `searchParams` are present. Product data MUST be fetched asynchronously from the Postgres database via `src/lib/catalog.ts`.
+(Library returns async functions; internals currently read from seed data via `src/data/*` with TODO markers for future Drizzle query swap.)
 
 #### Scenario: First visit with no params
 
@@ -37,7 +38,8 @@ All filter, sort, and pagination state MUST be encoded in `searchParams`. Reload
 
 ### Requirement: Multi-Value Filters
 
-The params `categoria`, `especie`, `marca`, and `tag` MUST accept comma-separated values. Within a group values combine with OR; across groups they combine with AND.
+The params `categoria`, `especie`, `marca`, and `tag` MUST accept comma-separated values. Within a group values combine with OR; across groups they combine with AND. Filters MUST be applied via async library functions in `src/lib/catalog.ts`.
+(Library functions apply filters; internals currently read from seed data with TODO markers for future Drizzle query swap.)
 
 #### Scenario: Cross-group AND, intra-group OR
 
@@ -53,7 +55,8 @@ The params `categoria`, `especie`, `marca`, and `tag` MUST accept comma-separate
 
 ### Requirement: Price Range Filter
 
-The param `precio=min-max` (CLP integers) MUST restrict results to products whose minimum variant price falls within the inclusive range. The UI SHALL offer presets; arbitrary ranges via URL MUST be honored.
+The param `precio=min-max` (CLP integers) MUST restrict results to products whose minimum variant price falls within the inclusive range. The UI SHALL offer presets; arbitrary ranges via URL MUST be honored. Price comparison is performed by async library functions in `src/lib/catalog.ts`.
+(Library functions apply filters; internals currently read from seed data with TODO markers for future Drizzle query swap.)
 
 #### Scenario: Preset range
 
@@ -80,7 +83,8 @@ The param `q` MUST filter products by substring match against `name` and `brand.
 
 ### Requirement: Sort Options
 
-The param `orden` MUST accept exactly: `relevancia` (default), `precio-asc`, `precio-desc`, `nombre`, `nuevos`. Unknown values MUST fall back to `relevancia`.
+The param `orden` MUST accept exactly: `relevancia` (default), `precio-asc`, `precio-desc`, `nombre`, `nuevos`. Unknown values MUST fall back to `relevancia`. Sorting is applied by async library functions in `src/lib/catalog.ts`.
+(Library functions apply sorting; internals currently read from seed data with TODO markers for future Drizzle query swap.)
 
 #### Scenario: Price ascending
 
@@ -90,7 +94,8 @@ The param `orden` MUST accept exactly: `relevancia` (default), `precio-asc`, `pr
 
 ### Requirement: Pagination
 
-The system MUST paginate at 12 items per page. The `page` param MUST be a 1-based integer. Out-of-range values MUST render an empty result with a link back to page 1.
+The system MUST paginate at 12 items per page. The `page` param MUST be a 1-based integer. Out-of-range values MUST render an empty result with a link back to page 1. Pagination is applied by async library functions in `src/lib/catalog.ts`.
+(Library functions apply pagination; internals currently read from seed data with TODO markers for future Drizzle query swap.)
 
 #### Scenario: Prev/next navigation
 

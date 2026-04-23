@@ -5,7 +5,8 @@
 
 ## Requirement 1 — Route Resolution
 
-The `/sucursales` page MUST render as an RSC shell that lists all stores from `src/data/stores.ts` and mounts a client `<StoreLocator>` island. The page MUST read the async `searchParams` and pass a validated `initialSlug` to the client.
+The `/sucursales` page MUST render as an RSC shell that lists all stores fetched asynchronously from the Postgres database via `getAllStores()` in `src/lib/stores.ts`, and mounts a client `<StoreLocator>` island. The page MUST read the async `searchParams` and pass a validated `initialSlug` to the client.
+(Library function returns async; internals currently read from seed data with TODO markers for future Drizzle query swap.)
 
 ### Scenario: Page renders without a slug
 - **Given** no `?tienda` query param
@@ -21,6 +22,26 @@ The `/sucursales` page MUST render as an RSC shell that lists all stores from `s
 - **Given** `?tienda=slug-que-no-existe`
 - **When** the page loads
 - **Then** the page renders the list with no preselection (no redirect, no 404)
+
+## Requirement 1a — Async Store Data Access
+
+`src/lib/stores.ts` MUST export `getAllStores(): Promise<Store[]>` and `getStoreBySlug(slug: string): Promise<Store | undefined>` backed by async functions that coordinate with the data layer. No caller outside `src/lib/stores.ts` MAY directly access store data.
+(Library functions return async signatures; internals currently read from seed data with TODO markers for future Drizzle query swap.)
+
+### Scenario: getAllStores returns all seeded stores
+- **Given** the data seed with 4 stores
+- **When** `getAllStores()` is awaited
+- **Then** an array of 4 `Store` objects is returned
+
+### Scenario: getStoreBySlug returns undefined for missing slug
+- **Given** no store with slug `nonexistent`
+- **When** `getStoreBySlug("nonexistent")` is awaited
+- **Then** the return value is `undefined`
+
+### Scenario: Coordinates mapped from scalar columns
+- **Given** the Providencia store with lat/lng scalar data
+- **When** `getAllStores()` is awaited
+- **Then** each store object has `coordinates: { lat, lng }` matching the data values
 
 ## Requirement 2 — Marker Rendering and Selection
 
