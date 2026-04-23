@@ -6,6 +6,7 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { Toaster } from "@/components/ui/sonner";
 import { CartRoot } from "@/components/cart/cart-root";
+import { absoluteUrl } from "@/lib/seo";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -37,6 +38,9 @@ export const metadata: Metadata = {
     "peluquería canina",
     "Chile",
   ],
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
     type: "website",
     locale: "es_CL",
@@ -44,6 +48,7 @@ export const metadata: Metadata = {
     title: "SimplePet",
     description:
       "Todo para tu mascota: alimentos, accesorios, farmacia y servicios veterinarios.",
+    url: absoluteUrl("/"),
   },
   twitter: {
     card: "summary_large_image",
@@ -73,8 +78,16 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="bg-background text-foreground min-h-full flex flex-col font-sans">
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-md focus:bg-primary focus:px-3 focus:py-2 focus:text-primary-foreground focus:shadow-md focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          Saltar al contenido
+        </a>
         <SiteHeader />
-        <main className="flex-1">{children}</main>
+        <main id="main" tabIndex={-1} className="flex-1 focus:outline-none">
+          {children}
+        </main>
         <SiteFooter />
         <CartRoot />
         <Toaster />

@@ -5,6 +5,7 @@ import { CartPageClient } from "./cart-page-client";
 export const metadata: Metadata = {
   title: "Carrito",
   description: "Revisa y edita los productos antes de pagar.",
+  alternates: { canonical: "/carrito" },
 };
 
 export default function CarritoPage() {

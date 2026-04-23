@@ -19,6 +19,7 @@ export const metadata: Metadata = {
   title: "Catálogo",
   description:
     "Explora alimentos, accesorios, farmacia y productos para tu mascota. Filtra por especie, marca y categoría.",
+  alternates: { canonical: "/catalogo" },
 };
 
 type Props = {

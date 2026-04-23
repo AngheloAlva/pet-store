@@ -42,4 +42,13 @@ describe("product page / generateMetadata", () => {
     });
     expect(meta.title).toBe("Producto no encontrado");
   });
+
+  it("includes a canonical alternate for a known slug", async () => {
+    const meta = await generateMetadata({
+      params: Promise.resolve({ slug: "royal-canin-medium-adult" }),
+    });
+    expect(meta.alternates?.canonical).toBe(
+      "/producto/royal-canin-medium-adult",
+    );
+  });
 });

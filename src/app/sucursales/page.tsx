@@ -7,6 +7,7 @@ import { StoreLocator } from "./store-locator";
 export const metadata: Metadata = {
   title: "Sucursales",
   description: `Encuentra tu SimplePet en ${getStoresCommuneSummary()}.`,
+  alternates: { canonical: "/sucursales" },
 };
 
 type SearchParams = Promise<{ tienda?: string | string[] }>;
