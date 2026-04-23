@@ -375,5 +375,5 @@ admin_users (staff con roles)
 - [ ] Notificaciones de restock funcionales
 - [ ] Blog con editor, listado y artículos SEO-ready
 - [ ] Vista `/staff` para consulta en tienda (stock, cliente, citas)
-- [ ] Seed data migrado a BD
+- [x] Seed data migrado a BD — Drizzle schema + Neon DB activo; lib layer (`catalog`, `stores`, `stock`) lee desde DB; `src/data/` eliminado (slice-8b)
 - [ ] Tests para flujos críticos (auth, puntos, agendamiento)

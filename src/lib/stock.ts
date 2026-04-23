@@ -58,8 +58,7 @@ export function getProductStockMatrix(variantId: string): StockRow[] {
     return levels.map((sl) => ({ store: sl.store, status: sl.status }));
   }
   // No stock records found — fall back to in_stock across all cached stores.
-  // This preserves the old @/data default behaviour where any unknown variantId
-  // was considered in_stock at every store.
+  // Preserves legacy behaviour: any unknown variantId is considered in_stock everywhere.
   return getCachedStores().map((store) => ({ store, status: "in_stock" as const }));
 }
 
