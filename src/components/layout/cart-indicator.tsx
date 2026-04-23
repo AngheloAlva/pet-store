@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { ShoppingCartSimple } from "@phosphor-icons/react/dist/ssr";
+import { ShoppingCartSimple } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { selectTotalItems, useCartStore } from "@/stores/cart";
@@ -9,6 +8,7 @@ import { useHydrated } from "@/lib/use-hydrated";
 
 export function CartIndicator() {
   const total = useCartStore(selectTotalItems);
+  const openCart = useCartStore((s) => s.openCart);
   const hydrated = useHydrated();
 
   return (
@@ -17,7 +17,7 @@ export function CartIndicator() {
       size="icon"
       className="relative"
       aria-label="Carrito"
-      render={<Link href="/carrito" />}
+      onClick={openCart}
     >
       <ShoppingCartSimple size={20} weight="regular" />
       {hydrated && total > 0 && (

@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { Toaster } from "@/components/ui/sonner";
+import { CartRoot } from "@/components/cart/cart-root";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -75,6 +76,7 @@ export default function RootLayout({
         <SiteHeader />
         <main className="flex-1">{children}</main>
         <SiteFooter />
+        <CartRoot />
         <Toaster />
       </body>
     </html>

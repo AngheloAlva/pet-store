@@ -22,6 +22,8 @@ export function AddToCartButton({
 }: Props) {
   const addItem = useCartStore((state) => state.addItem);
 
+  const openCart = useCartStore((state) => state.openCart);
+
   async function handleClick() {
     addItem(
       {
@@ -35,9 +37,11 @@ export function AddToCartButton({
       },
       quantity,
     );
+    openCart();
     const { toast } = await import("sonner");
     toast.success(
       `${product.name}${variantLabel ? ` (${variantLabel})` : ""} agregado al carrito`,
+      { duration: 1500 },
     );
   }
 

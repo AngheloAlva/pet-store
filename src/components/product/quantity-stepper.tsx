@@ -7,11 +7,12 @@ import { clampQuantity } from "@/lib/pdp";
 type Props = {
   value: number;
   onChange: (next: number) => void;
+  max?: number;
 };
 
-export function QuantityStepper({ value, onChange }: Props) {
+export function QuantityStepper({ value, onChange, max = 99 }: Props) {
   const atMin = value <= 1;
-  const atMax = value >= 99;
+  const atMax = value >= max;
 
   return (
     <div className="inline-flex items-center gap-2">
@@ -30,10 +31,10 @@ export function QuantityStepper({ value, onChange }: Props) {
         inputMode="numeric"
         aria-label="Cantidad"
         value={value}
-        onChange={(e) => onChange(clampQuantity(Number(e.target.value)))}
+        onChange={(e) => onChange(Math.min(clampQuantity(Number(e.target.value)), max))}
         className="h-8 w-14 rounded-md border border-border bg-background text-center text-sm font-medium tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
         min={1}
-        max={99}
+        max={max}
       />
       <Button
         type="button"

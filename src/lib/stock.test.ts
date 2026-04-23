@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   getProductStockMatrix,
+  getVariantTotalStock,
   isVariantGloballyOutOfStock,
 } from "./stock";
 import { stores } from "@/data";
@@ -67,5 +68,28 @@ describe("isVariantGloballyOutOfStock", () => {
       );
       expect(isVariantGloballyOutOfStock("synthetic-mixed")).toBe(false);
     });
+  });
+});
+
+describe("getVariantTotalStock", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("returns stores.length * 99 when every store is in_stock", () => {
+    expect(getVariantTotalStock("rc-ma-3")).toBe(stores.length * 99);
+  });
+
+  it("sums synthetic units for mixed statuses (in_stock=99, low_stock=3, out_of_stock=0)", () => {
+    // rc-ma-15: maipu=out_of_stock (0), nunoa=low_stock (3), other two in_stock (99 each)
+    const expected = 99 + 3 + 0 + 99;
+    expect(getVariantTotalStock("rc-ma-15")).toBe(expected);
+  });
+
+  it("returns 0 when every store is out_of_stock", () => {
+    vi.spyOn(stockData, "getStockLevel").mockImplementation(
+      (variantId, storeId) => ({ variantId, storeId, status: "out_of_stock" }),
+    );
+    expect(getVariantTotalStock("synthetic-oos")).toBe(0);
   });
 });

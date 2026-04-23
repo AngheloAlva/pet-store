@@ -38,6 +38,20 @@ describe("AddToCartButton", () => {
     });
   });
 
+  it("opens the cart drawer after adding", async () => {
+    const user = userEvent.setup();
+    useCartStore.getState().closeCart();
+    const product = getProductBySlug("royal-canin-medium-adult")!;
+    const variant = findVariantById(product, "rc-ma-8");
+
+    render(
+      <AddToCartButton product={product} variant={variant} quantity={1} />,
+    );
+    await user.click(screen.getByRole("button", { name: /agregar al carrito/i }));
+
+    expect(useCartStore.getState().isOpen).toBe(true);
+  });
+
   it("is disabled when the variant is globally out of stock", () => {
     const product = getProductBySlug("royal-canin-medium-adult")!;
     const variant = findVariantById(product, "rc-ma-8");
