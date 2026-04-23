@@ -55,6 +55,39 @@ export function getAllBrands(): Brand[] {
   return [...brands].sort((a, b) => a.name.localeCompare(b.name));
 }
 
+export function getProductBySlug(slug: string): Product | undefined {
+  return products.find((p) => p.slug === slug);
+}
+
+export function getCategoryById(id: string): Category | undefined {
+  return categories.find((c) => c.id === id);
+}
+
+export function getCategoryBreadcrumb(categoryId: string): Category[] {
+  const chain: Category[] = [];
+  let current = getCategoryById(categoryId);
+  while (current) {
+    chain.unshift(current);
+    current = current.parentId ? getCategoryById(current.parentId) : undefined;
+  }
+  return chain;
+}
+
+export function getRelatedProducts(product: Product, limit = 4): Product[] {
+  const scored = products
+    .filter((p) => p.id !== product.id)
+    .map((p) => {
+      let score = 0;
+      if (p.categoryIds.some((c) => product.categoryIds.includes(c))) score += 3;
+      if (p.species.some((s) => product.species.includes(s))) score += 2;
+      if (p.brandId === product.brandId) score += 1;
+      return { product: p, score };
+    })
+    .filter((entry) => entry.score > 0)
+    .sort((a, b) => b.score - a.score);
+  return scored.slice(0, limit).map((e) => e.product);
+}
+
 export type CategoryNode = {
   category: Category;
   children: Category[];

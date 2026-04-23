@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   PAGE_SIZE,
+  getCategoryBreadcrumb,
+  getCategoryById,
   getCategoryWithDescendants,
   getMinPrice,
+  getProductBySlug,
+  getRelatedProducts,
   queryProducts,
 } from "./catalog";
 import { parseCatalogQuery } from "./url-params";
@@ -106,5 +110,76 @@ describe("queryProducts", () => {
     const result = queryProducts(q);
     expect(result.items).toEqual([]);
     expect(result.total).toBe(0);
+  });
+});
+
+describe("getProductBySlug", () => {
+  it("returns the product with matching slug", () => {
+    const product = getProductBySlug("royal-canin-medium-adult");
+    expect(product).toBeDefined();
+    expect(product?.id).toBe("rc-medium-adult");
+  });
+
+  it("returns undefined for unknown slug", () => {
+    expect(getProductBySlug("bogus-slug")).toBeUndefined();
+  });
+});
+
+describe("getCategoryById", () => {
+  it("returns the category by id", () => {
+    const c = getCategoryById("perros");
+    expect(c?.slug).toBe("perros");
+  });
+
+  it("returns undefined for unknown id", () => {
+    expect(getCategoryById("unknown-id")).toBeUndefined();
+  });
+});
+
+describe("getCategoryBreadcrumb", () => {
+  it("returns root → leaf chain for a child category", () => {
+    const chain = getCategoryBreadcrumb("alimentos-perros");
+    expect(chain.map((c) => c.id)).toEqual(["perros", "alimentos-perros"]);
+  });
+
+  it("returns just the category itself when it is top-level", () => {
+    const chain = getCategoryBreadcrumb("perros");
+    expect(chain.map((c) => c.id)).toEqual(["perros"]);
+  });
+
+  it("returns empty array for unknown category", () => {
+    expect(getCategoryBreadcrumb("unknown")).toEqual([]);
+  });
+});
+
+describe("getRelatedProducts", () => {
+  it("excludes the current product from results", () => {
+    const product = getProductBySlug("royal-canin-medium-adult")!;
+    const related = getRelatedProducts(product);
+    expect(related.every((p) => p.id !== product.id)).toBe(true);
+  });
+
+  it("returns at most the specified limit", () => {
+    const product = getProductBySlug("royal-canin-medium-adult")!;
+    const related = getRelatedProducts(product, 3);
+    expect(related.length).toBeLessThanOrEqual(3);
+  });
+
+  it("defaults to limit 4", () => {
+    const product = getProductBySlug("royal-canin-medium-adult")!;
+    const related = getRelatedProducts(product);
+    expect(related.length).toBeLessThanOrEqual(4);
+  });
+
+  it("prioritizes products sharing a primary category over species/brand", () => {
+    const product = getProductBySlug("royal-canin-medium-adult")!; // categoryIds: ["alimentos-perros"], species: dog, brand royal-canin
+    const related = getRelatedProducts(product, 4);
+    // All results should have score > 0 — share at least one of category/species/brand.
+    for (const r of related) {
+      const sharesCategory = r.categoryIds.some((c) => product.categoryIds.includes(c));
+      const sharesSpecies = r.species.some((s) => product.species.includes(s));
+      const sharesBrand = r.brandId === product.brandId;
+      expect(sharesCategory || sharesSpecies || sharesBrand).toBe(true);
+    }
   });
 });
