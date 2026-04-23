@@ -1,13 +1,16 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   getProductStockMatrix,
+  getProductStockMatrixAsync,
   getVariantTotalStock,
+  getVariantTotalStockAsync,
   isVariantGloballyOutOfStock,
+  isVariantGloballyOutOfStockAsync,
 } from "./stock";
 import { stores } from "@/data";
 import * as stockData from "@/data/stock";
 
-describe("getProductStockMatrix", () => {
+describe("getProductStockMatrix (sync)", () => {
   it("returns one row per store", () => {
     const rows = getProductStockMatrix("rc-ma-3");
     expect(rows).toHaveLength(stores.length);
@@ -24,7 +27,6 @@ describe("getProductStockMatrix", () => {
   });
 
   it("reflects exception status for a known variant/store", () => {
-    // rc-ma-15 is out_of_stock in maipu per src/data/stock.ts
     const rows = getProductStockMatrix("rc-ma-15");
     const maipu = rows.find((r) => r.store.id === "maipu");
     expect(maipu?.status).toBe("out_of_stock");
@@ -33,7 +35,20 @@ describe("getProductStockMatrix", () => {
   });
 });
 
-describe("isVariantGloballyOutOfStock", () => {
+describe("getProductStockMatrixAsync", () => {
+  it("resolves to the same result as the sync version", async () => {
+    const sync = getProductStockMatrix("rc-ma-15");
+    const async_ = await getProductStockMatrixAsync("rc-ma-15");
+    expect(async_).toEqual(sync);
+  });
+
+  it("returns one row per store", async () => {
+    const rows = await getProductStockMatrixAsync("rc-ma-3");
+    expect(rows).toHaveLength(stores.length);
+  });
+});
+
+describe("isVariantGloballyOutOfStock (sync)", () => {
   it("returns false when at least one store is in_stock", () => {
     expect(isVariantGloballyOutOfStock("rc-ma-15")).toBe(false);
   });
@@ -71,7 +86,17 @@ describe("isVariantGloballyOutOfStock", () => {
   });
 });
 
-describe("getVariantTotalStock", () => {
+describe("isVariantGloballyOutOfStockAsync", () => {
+  it("returns false for a variant available in some stores", async () => {
+    expect(await isVariantGloballyOutOfStockAsync("rc-ma-15")).toBe(false);
+  });
+
+  it("returns false when all stores are in_stock", async () => {
+    expect(await isVariantGloballyOutOfStockAsync("rc-ma-3")).toBe(false);
+  });
+});
+
+describe("getVariantTotalStock (sync)", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -91,5 +116,17 @@ describe("getVariantTotalStock", () => {
       (variantId, storeId) => ({ variantId, storeId, status: "out_of_stock" }),
     );
     expect(getVariantTotalStock("synthetic-oos")).toBe(0);
+  });
+});
+
+describe("getVariantTotalStockAsync", () => {
+  it("returns the same total as the sync version", async () => {
+    const sync = getVariantTotalStock("rc-ma-15");
+    const async_ = await getVariantTotalStockAsync("rc-ma-15");
+    expect(async_).toBe(sync);
+  });
+
+  it("returns stores.length * 99 for fully in_stock variant", async () => {
+    expect(await getVariantTotalStockAsync("rc-ma-3")).toBe(stores.length * 99);
   });
 });

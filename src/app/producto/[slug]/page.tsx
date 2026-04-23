@@ -6,15 +6,15 @@ import { ProductGallery } from "@/components/product/product-gallery";
 import { ProductInfoTabs } from "@/components/product/product-info-tabs";
 import { ProductPurchasePanel } from "@/components/product/product-purchase-panel";
 import { RelatedProducts } from "@/components/product/related-products";
-import { getProductBySlug } from "@/lib/catalog";
-import { products } from "@/data";
+import { getAllProductSlugs, getProductBySlug } from "@/lib/catalog";
 
 type Props = {
   params: Promise<{ slug: string }>;
 };
 
-export function generateStaticParams() {
-  return products.map((p) => ({ slug: p.slug }));
+export async function generateStaticParams() {
+  const slugs = await getAllProductSlugs();
+  return slugs.map((slug) => ({ slug }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {

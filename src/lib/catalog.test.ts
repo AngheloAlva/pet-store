@@ -8,11 +8,29 @@ import {
   getProductBySlug,
   getRelatedProducts,
   queryProducts,
+  getAllProductSlugs,
 } from "./catalog";
 import { parseCatalogQuery } from "./url-params";
 import { products } from "@/data";
 
 const emptyQuery = () => parseCatalogQuery({});
+
+describe("getAllProductSlugs", () => {
+  it("returns a Promise resolving to all product slugs", async () => {
+    const slugs = await getAllProductSlugs();
+    expect(slugs).toHaveLength(products.length);
+    expect(slugs).toContain("royal-canin-medium-adult");
+    for (const slug of slugs) {
+      expect(typeof slug).toBe("string");
+    }
+  });
+
+  it("returned slugs are unique", async () => {
+    const slugs = await getAllProductSlugs();
+    const unique = new Set(slugs);
+    expect(unique.size).toBe(slugs.length);
+  });
+});
 
 describe("getCategoryWithDescendants", () => {
   it("expands top-level category to include children", () => {
@@ -68,8 +86,6 @@ describe("queryProducts", () => {
   it("matches accent-insensitive search against name and brand", () => {
     const q = parseCatalogQuery({ q: "nunoa" });
     const result = queryProducts(q);
-    // At least when products contain Ñ variants, this should match. Safer: ensure
-    // query with brand term is accent-normalized.
     const royal = queryProducts(parseCatalogQuery({ q: "royal" }));
     expect(royal.total).toBeGreaterThan(0);
     for (const p of royal.items) {
@@ -172,9 +188,8 @@ describe("getRelatedProducts", () => {
   });
 
   it("prioritizes products sharing a primary category over species/brand", () => {
-    const product = getProductBySlug("royal-canin-medium-adult")!; // categoryIds: ["alimentos-perros"], species: dog, brand royal-canin
+    const product = getProductBySlug("royal-canin-medium-adult")!;
     const related = getRelatedProducts(product, 4);
-    // All results should have score > 0 — share at least one of category/species/brand.
     for (const r of related) {
       const sharesCategory = r.categoryIds.some((c) => product.categoryIds.includes(c));
       const sharesSpecies = r.species.some((s) => product.species.includes(s));

@@ -1,14 +1,50 @@
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_MAP_VIEWPORT,
+  getAllStores,
   getStoreBySlug,
+  getStoreBySlugAsync,
   getStoresByService,
   getStoresCommuneSummary,
   STORE_SERVICE_META,
 } from "./stores";
 import { stores } from "@/data";
 
-describe("getStoreBySlug", () => {
+describe("getAllStores", () => {
+  it("returns a Promise resolving to all 4 stores", async () => {
+    const result = await getAllStores();
+    expect(result).toHaveLength(stores.length);
+    expect(result.map((s) => s.slug)).toEqual(stores.map((s) => s.slug));
+  });
+
+  it("each store has coordinates with lat and lng", async () => {
+    const result = await getAllStores();
+    for (const s of result) {
+      expect(typeof s.coordinates.lat).toBe("number");
+      expect(typeof s.coordinates.lng).toBe("number");
+    }
+  });
+});
+
+describe("getStoreBySlugAsync", () => {
+  it("returns the store for an existing slug", async () => {
+    const s = await getStoreBySlugAsync("maipu");
+    expect(s?.slug).toBe("maipu");
+    expect(s?.commune).toBe("Maipú");
+  });
+
+  it("returns undefined for a missing slug", async () => {
+    expect(await getStoreBySlugAsync("no-existe")).toBeUndefined();
+  });
+
+  it("returns undefined for null or undefined", async () => {
+    expect(await getStoreBySlugAsync(null)).toBeUndefined();
+    expect(await getStoreBySlugAsync(undefined)).toBeUndefined();
+    expect(await getStoreBySlugAsync("")).toBeUndefined();
+  });
+});
+
+describe("getStoreBySlug (sync)", () => {
   it("returns the store for an existing slug", () => {
     const s = getStoreBySlug("maipu");
     expect(s?.slug).toBe("maipu");

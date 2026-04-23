@@ -1,3 +1,10 @@
+/**
+ * catalog.ts — async lib layer (data still from src/data/* until Neon is provisioned).
+ *
+ * TODO(slice-8-follow-up): After running `pnpm db:seed`, replace the
+ * Promise.resolve() wrappers below with actual Drizzle queries from `@/db`.
+ * The async signatures are already in place — no call-site changes needed.
+ */
 import { brands, categories, products } from "@/data";
 import type { Brand, Category, Product, ProductTag } from "@/types";
 import type { Species } from "@/types/common";
@@ -6,6 +13,7 @@ import {
   type CatalogQuery,
   type SortKey,
 } from "@/lib/url-params";
+import { cache } from "react";
 
 export const PAGE_SIZE = 12;
 
@@ -27,6 +35,49 @@ export const PRICE_PRESETS: ReadonlyArray<{
   { value: "30000-60000", label: "$30.000 – $60.000", range: [30000, 60000] },
   { value: "60000-999999999", label: "Más de $60.000", range: [60000, 999_999_999] },
 ];
+
+// ---------------------------------------------------------------------------
+// Async helpers — call-site API is final; internals swap to DB later
+// ---------------------------------------------------------------------------
+
+/** Returns all product slugs. Used by generateStaticParams and sitemap. */
+export const getAllProductSlugs = cache(async (): Promise<string[]> => {
+  return Promise.resolve(products.map((p) => p.slug));
+});
+
+export const getAllBrandsAsync = cache(async (): Promise<Brand[]> => {
+  return Promise.resolve([...brands].sort((a, b) => a.name.localeCompare(b.name)));
+});
+
+export const getProductBySlugAsync = cache(async (slug: string): Promise<Product | undefined> => {
+  return Promise.resolve(products.find((p) => p.slug === slug));
+});
+
+export const getFeaturedProductsAsync = cache(async (limit?: number): Promise<Product[]> => {
+  const list = products.filter((p) => p.featured);
+  return Promise.resolve(typeof limit === "number" ? list.slice(0, limit) : list);
+});
+
+export const getRelatedProductsAsync = cache(
+  async (product: Product, limit = 4): Promise<Product[]> => {
+    const scored = products
+      .filter((p) => p.id !== product.id)
+      .map((p) => {
+        let score = 0;
+        if (p.categoryIds.some((c) => product.categoryIds.includes(c))) score += 3;
+        if (p.species.some((s) => product.species.includes(s))) score += 2;
+        if (p.brandId === product.brandId) score += 1;
+        return { product: p, score };
+      })
+      .filter((entry) => entry.score > 0)
+      .sort((a, b) => b.score - a.score);
+    return Promise.resolve(scored.slice(0, limit).map((e) => e.product));
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Sync helpers (unchanged — kept for internal use and non-RSC callers)
+// ---------------------------------------------------------------------------
 
 export function getFeaturedProducts(limit?: number): Product[] {
   const list = products.filter((p) => p.featured);

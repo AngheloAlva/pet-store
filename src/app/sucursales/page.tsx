@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Container } from "@/components/layout/container";
-import { stores } from "@/data";
-import { getStoreBySlug, getStoresCommuneSummary } from "@/lib/stores";
+import { getAllStores, getStoreBySlug, getStoresCommuneSummary } from "@/lib/stores";
 import { StoreLocator } from "./store-locator";
 
 export const metadata: Metadata = {
@@ -22,6 +21,8 @@ export default async function SucursalesPage({
   const candidate = Array.isArray(raw) ? raw[0] : raw;
   const initial = getStoreBySlug(candidate);
   const initialSlug = initial?.slug ?? null;
+
+  const stores = await getAllStores();
 
   return (
     <Container className="py-8">

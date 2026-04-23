@@ -1,22 +1,36 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
+import { products } from "@/data";
 
-// Mock next/navigation for notFound() tests. generateMetadata and
-// generateStaticParams are plain functions we can exercise directly.
+// Mock next/navigation for notFound() tests.
 vi.mock("next/navigation", () => ({
   notFound: vi.fn(() => {
     throw new Error("NEXT_NOT_FOUND");
   }),
 }));
 
+// Mock the lib/catalog async helpers so tests don't need DATABASE_URL.
+vi.mock("@/lib/catalog", async (importOriginal) => {
+  const original = await importOriginal<typeof import("@/lib/catalog")>();
+  return {
+    ...original,
+    getAllProductSlugs: vi.fn(async () => products.map((p) => p.slug)),
+    getProductBySlug: vi.fn((slug: string) => products.find((p) => p.slug === slug)),
+    getProductBySlugAsync: vi.fn(async (slug: string) => products.find((p) => p.slug === slug)),
+  };
+});
+
 import {
   generateMetadata,
   generateStaticParams,
 } from "./page";
-import { products } from "@/data";
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 describe("product page / generateStaticParams", () => {
-  it("emits one slug per seed product", () => {
-    const params = generateStaticParams();
+  it("emits one slug per seed product", async () => {
+    const params = await generateStaticParams();
     expect(params).toHaveLength(products.length);
     const slugs = new Set(params.map((p) => p.slug));
     expect(slugs.size).toBe(params.length);
