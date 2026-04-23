@@ -1,12 +1,15 @@
 /**
- * stock.ts — async lib layer (data still from src/data/* until Neon is provisioned).
+ * stock.ts — lib layer backed by Drizzle (DB is source of truth).
  *
- * TODO(slice-8-follow-up): After running `pnpm db:seed`, replace the
- * Promise.resolve() wrappers below with actual Drizzle queries from `@/db`.
+ * Async helpers use loadAllStockLevels() from @/db/loaders.
+ * Sync helpers use getCachedStockLevels() (pre-populated by initSyncCache in root layout).
+ * Public signatures are unchanged — no call-site modifications needed.
+ *
+ * IMPORTANT: getVariantTotalStock / isVariantGloballyOutOfStock / getProductStockMatrix
+ * remain synchronous because src/stores/cart.ts (Zustand) calls them sync.
  */
-import { stores } from "@/data";
-import { getStockLevel } from "@/data/stock";
 import type { StockStatus, Store } from "@/types";
+import { loadAllStockLevels, getCachedStockLevels } from "@/db/loaders";
 
 export type StockRow = {
   store: Store;
@@ -24,26 +27,31 @@ export const STATUS_TO_UNITS: Record<StockStatus, number> = {
 // ---------------------------------------------------------------------------
 
 export async function getProductStockMatrixAsync(variantId: string): Promise<StockRow[]> {
-  return Promise.resolve(getProductStockMatrix(variantId));
+  const stockLevels = await loadAllStockLevels();
+  return stockLevels
+    .filter((sl) => sl.variantId === variantId)
+    .map((sl) => ({ store: sl.store, status: sl.status }));
 }
 
 export async function isVariantGloballyOutOfStockAsync(variantId: string): Promise<boolean> {
-  return Promise.resolve(isVariantGloballyOutOfStock(variantId));
+  const rows = await getProductStockMatrixAsync(variantId);
+  if (rows.length === 0) return false;
+  return rows.every((row) => row.status === "out_of_stock");
 }
 
 export async function getVariantTotalStockAsync(variantId: string): Promise<number> {
-  return Promise.resolve(getVariantTotalStock(variantId));
+  const rows = await getProductStockMatrixAsync(variantId);
+  return rows.reduce((acc, row) => acc + STATUS_TO_UNITS[row.status], 0);
 }
 
 // ---------------------------------------------------------------------------
-// Sync helpers (unchanged — kept for callers that are not async)
+// Sync helpers (backed by sync module-level cache — populated by initSyncCache)
 // ---------------------------------------------------------------------------
 
 export function getProductStockMatrix(variantId: string): StockRow[] {
-  return stores.map((store) => ({
-    store,
-    status: getStockLevel(variantId, store.id).status,
-  }));
+  return getCachedStockLevels()
+    .filter((sl) => sl.variantId === variantId)
+    .map((sl) => ({ store: sl.store, status: sl.status }));
 }
 
 export function isVariantGloballyOutOfStock(variantId: string): boolean {

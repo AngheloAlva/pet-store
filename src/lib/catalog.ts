@@ -1,11 +1,10 @@
 /**
- * catalog.ts — async lib layer (data still from src/data/* until Neon is provisioned).
+ * catalog.ts — lib layer backed by Drizzle (DB is source of truth).
  *
- * TODO(slice-8-follow-up): After running `pnpm db:seed`, replace the
- * Promise.resolve() wrappers below with actual Drizzle queries from `@/db`.
- * The async signatures are already in place — no call-site changes needed.
+ * Async helpers use react cache()-wrapped loaders from @/db/loaders.
+ * Sync helpers use the module-level cache (pre-populated by initSyncCache in root layout).
+ * Public signatures are unchanged — no call-site modifications needed.
  */
-import { brands, categories, products } from "@/data";
 import type { Brand, Category, Product, ProductTag } from "@/types";
 import type { Species } from "@/types/common";
 import {
@@ -14,6 +13,13 @@ import {
   type SortKey,
 } from "@/lib/url-params";
 import { cache } from "react";
+import {
+  loadAllProducts,
+  loadAllBrands,
+  getCachedProducts,
+  getCachedBrands,
+  getCachedCategories,
+} from "@/db/loaders";
 
 export const PAGE_SIZE = 12;
 
@@ -37,29 +43,34 @@ export const PRICE_PRESETS: ReadonlyArray<{
 ];
 
 // ---------------------------------------------------------------------------
-// Async helpers — call-site API is final; internals swap to DB later
+// Async helpers — backed by Drizzle loaders
 // ---------------------------------------------------------------------------
 
 /** Returns all product slugs. Used by generateStaticParams and sitemap. */
 export const getAllProductSlugs = cache(async (): Promise<string[]> => {
-  return Promise.resolve(products.map((p) => p.slug));
+  const products = await loadAllProducts();
+  return products.map((p) => p.slug);
 });
 
 export const getAllBrandsAsync = cache(async (): Promise<Brand[]> => {
-  return Promise.resolve([...brands].sort((a, b) => a.name.localeCompare(b.name)));
+  const brands = await loadAllBrands();
+  return [...brands].sort((a, b) => a.name.localeCompare(b.name));
 });
 
 export const getProductBySlugAsync = cache(async (slug: string): Promise<Product | undefined> => {
-  return Promise.resolve(products.find((p) => p.slug === slug));
+  const products = await loadAllProducts();
+  return products.find((p) => p.slug === slug);
 });
 
 export const getFeaturedProductsAsync = cache(async (limit?: number): Promise<Product[]> => {
+  const products = await loadAllProducts();
   const list = products.filter((p) => p.featured);
-  return Promise.resolve(typeof limit === "number" ? list.slice(0, limit) : list);
+  return typeof limit === "number" ? list.slice(0, limit) : list;
 });
 
 export const getRelatedProductsAsync = cache(
   async (product: Product, limit = 4): Promise<Product[]> => {
+    const products = await loadAllProducts();
     const scored = products
       .filter((p) => p.id !== product.id)
       .map((p) => {
@@ -71,27 +82,27 @@ export const getRelatedProductsAsync = cache(
       })
       .filter((entry) => entry.score > 0)
       .sort((a, b) => b.score - a.score);
-    return Promise.resolve(scored.slice(0, limit).map((e) => e.product));
+    return scored.slice(0, limit).map((e) => e.product);
   },
 );
 
 // ---------------------------------------------------------------------------
-// Sync helpers (unchanged — kept for internal use and non-RSC callers)
+// Sync helpers (unchanged — backed by sync module-level cache)
 // ---------------------------------------------------------------------------
 
 export function getFeaturedProducts(limit?: number): Product[] {
-  const list = products.filter((p) => p.featured);
+  const list = getCachedProducts().filter((p) => p.featured);
   return typeof limit === "number" ? list.slice(0, limit) : list;
 }
 
 export function getTopLevelCategories(): Category[] {
-  return categories
+  return getCachedCategories()
     .filter((c) => c.parentId === null)
     .sort((a, b) => a.order - b.order);
 }
 
 export function getBrand(brandId: string): Brand | undefined {
-  return brands.find((b) => b.id === brandId);
+  return getCachedBrands().find((b) => b.id === brandId);
 }
 
 export function getMinPrice(product: Product): number {
@@ -103,15 +114,15 @@ export function getPrimaryVariant(product: Product) {
 }
 
 export function getAllBrands(): Brand[] {
-  return [...brands].sort((a, b) => a.name.localeCompare(b.name));
+  return [...getCachedBrands()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export function getProductBySlug(slug: string): Product | undefined {
-  return products.find((p) => p.slug === slug);
+  return getCachedProducts().find((p) => p.slug === slug);
 }
 
 export function getCategoryById(id: string): Category | undefined {
-  return categories.find((c) => c.id === id);
+  return getCachedCategories().find((c) => c.id === id);
 }
 
 export function getCategoryBreadcrumb(categoryId: string): Category[] {
@@ -125,7 +136,7 @@ export function getCategoryBreadcrumb(categoryId: string): Category[] {
 }
 
 export function getRelatedProducts(product: Product, limit = 4): Product[] {
-  const scored = products
+  const scored = getCachedProducts()
     .filter((p) => p.id !== product.id)
     .map((p) => {
       let score = 0;
@@ -147,13 +158,14 @@ export type CategoryNode = {
 export function getCategoryTree(): CategoryNode[] {
   return getTopLevelCategories().map((parent) => ({
     category: parent,
-    children: categories
+    children: getCachedCategories()
       .filter((c) => c.parentId === parent.id)
       .sort((a, b) => a.order - b.order),
   }));
 }
 
 export function getCategoryWithDescendants(slug: string): string[] {
+  const categories = getCachedCategories();
   const root = categories.find((c) => c.slug === slug);
   if (!root) return [slug];
   const descendants = categories
@@ -164,12 +176,12 @@ export function getCategoryWithDescendants(slug: string): string[] {
 
 export function getSpeciesInUse(): Species[] {
   const all = new Set<Species>();
-  for (const p of products) for (const s of p.species) all.add(s);
+  for (const p of getCachedProducts()) for (const s of p.species) all.add(s);
   return Array.from(all);
 }
 
 export function getPriceRange(): { min: number; max: number } {
-  const all = products.flatMap((p) => p.variants.map((v) => v.price.amount));
+  const all = getCachedProducts().flatMap((p) => p.variants.map((v) => v.price.amount));
   return { min: Math.min(...all), max: Math.max(...all) };
 }
 
@@ -262,7 +274,7 @@ export function queryProducts(query: CatalogQuery): QueryResult {
     query.categorias.flatMap(getCategoryWithDescendants),
   );
 
-  const filtered = products.filter((p) => {
+  const filtered = getCachedProducts().filter((p) => {
     if (!matchesQuery(p, query.q)) return false;
     if (query.especies.length && !p.species.some((s) => query.especies.includes(s))) {
       return false;

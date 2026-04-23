@@ -7,6 +7,7 @@ import { SiteFooter } from "@/components/layout/site-footer";
 import { Toaster } from "@/components/ui/sonner";
 import { CartRoot } from "@/components/cart/cart-root";
 import { absoluteUrl } from "@/lib/seo";
+import { initSyncCache } from "@/db/loaders";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -68,9 +69,13 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  // Hydrate sync-backing cache before any child RSC or client component mounts.
+  // This ensures getCachedProducts(), getCachedStores(), etc. are populated.
+  await initSyncCache();
+
   return (
     <html
       lang="es-CL"

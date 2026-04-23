@@ -1,8 +1,9 @@
 /**
- * stores.ts — async lib layer (data still from src/data/* until Neon is provisioned).
+ * stores.ts — lib layer backed by Drizzle (DB is source of truth).
  *
- * TODO(slice-8-follow-up): After running `pnpm db:seed`, replace the
- * Promise.resolve() wrappers below with actual Drizzle queries from `@/db`.
+ * Async helpers use loadAllStores() from @/db/loaders.
+ * Sync helpers use getCachedStores() (pre-populated by initSyncCache in root layout).
+ * Public signatures are unchanged — no call-site modifications needed.
  */
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import {
@@ -11,9 +12,9 @@ import {
   Scissors,
   Storefront,
 } from "@phosphor-icons/react/dist/ssr";
-import { stores } from "@/data";
 import type { Store, StoreService } from "@/types";
 import { cache } from "react";
+import { loadAllStores, getCachedStores } from "@/db/loaders";
 
 export const DEFAULT_MAP_VIEWPORT: {
   center: [number, number];
@@ -29,34 +30,35 @@ export const DEFAULT_MAP_VIEWPORT: {
 
 /** Returns all stores. */
 export const getAllStores = cache(async (): Promise<Store[]> => {
-  return Promise.resolve(stores);
+  return loadAllStores();
 });
 
 /** Returns a store by slug or undefined. */
 export const getStoreBySlugAsync = cache(
   async (slug: string | undefined | null): Promise<Store | undefined> => {
     if (!slug) return undefined;
-    return Promise.resolve(stores.find((s) => s.slug === slug));
+    const stores = await loadAllStores();
+    return stores.find((s) => s.slug === slug);
   },
 );
 
 // ---------------------------------------------------------------------------
-// Sync helpers (unchanged — kept for callers that are not async)
+// Sync helpers (unchanged — backed by sync module-level cache)
 // ---------------------------------------------------------------------------
 
 export function getStoreBySlug(
   slug: string | undefined | null,
 ): Store | undefined {
   if (!slug) return undefined;
-  return stores.find((s) => s.slug === slug);
+  return getCachedStores().find((s) => s.slug === slug);
 }
 
 export function getStoresCommuneSummary(): string {
-  return stores.map((s) => s.commune).join(", ");
+  return getCachedStores().map((s) => s.commune).join(", ");
 }
 
 export function getStoresByService(service: StoreService): Store[] {
-  return stores.filter((s) => s.services.includes(service));
+  return getCachedStores().filter((s) => s.services.includes(service));
 }
 
 export type StoreServiceMetaEntry = {
