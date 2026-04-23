@@ -13,6 +13,8 @@ const eslintConfig = defineConfig([
     "build/**",
     "coverage/**",
     "next-env.d.ts",
+    // Third-party UI primitive from the mapcn registry; upstream owns quality.
+    "src/components/ui/map.tsx",
   ]),
 ]);
 
