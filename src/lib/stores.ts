@@ -4,7 +4,7 @@ import {
   Pill,
   Scissors,
   Storefront,
-} from "@phosphor-icons/react";
+} from "@phosphor-icons/react/dist/ssr";
 import { stores } from "@/data";
 import type { Store, StoreService } from "@/types";
 
