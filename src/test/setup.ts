@@ -50,6 +50,33 @@ vi.mock("@/db/loaders", async () => {
   };
 });
 
+// Mock @/db/sync-cache with fixture data.
+// The getCached* getters were moved here from @/db/loaders (slice-9 refactor).
+// This mock must mirror the @/db/loaders mock so lib helpers that import from
+// @/db/sync-cache directly also receive correct fixture data.
+vi.mock("@/db/sync-cache", async () => {
+  const { products, brands, categories, stores, getStockLevel } = await import(
+    "@/test/fixtures/index"
+  );
+  const stockLevels = stores.flatMap((store) =>
+    products.flatMap((product) =>
+      product.variants.map((variant) => ({
+        ...getStockLevel(variant.id, store.id),
+        store,
+      })),
+    ),
+  );
+  return {
+    getCachedProducts: vi.fn(() => products),
+    getCachedBrands: vi.fn(() => brands),
+    getCachedCategories: vi.fn(() => categories),
+    getCachedStores: vi.fn(() => stores),
+    getCachedStockLevels: vi.fn(() => stockLevels),
+    setSyncCache: vi.fn(),
+    isInitialized: vi.fn(() => true),
+  };
+});
+
 // ---------------------------------------------------------------------------
 // jsdom polyfills
 // ---------------------------------------------------------------------------

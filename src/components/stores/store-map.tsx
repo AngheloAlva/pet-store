@@ -11,7 +11,7 @@ import {
   MarkerContent,
 } from "@/components/ui/map";
 import { cn } from "@/lib/utils";
-import { DEFAULT_MAP_VIEWPORT } from "@/lib/stores";
+import { DEFAULT_MAP_VIEWPORT } from "@/lib/stores-constants";
 import type { Store } from "@/types";
 import { StorePopupCard } from "./store-popup-card";
 

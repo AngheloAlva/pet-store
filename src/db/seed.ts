@@ -1,29 +1,16 @@
 /**
- * Seed script — idempotent via ON CONFLICT DO UPDATE.
- * Run: DATABASE_URL=<url> pnpm db:seed
- *
- * Data source: src/test/fixtures/* (snapshot of src/data/*)
- * When DATABASE_URL is not set this exits with a human-readable error.
+ * Seed module — idempotent via ON CONFLICT DO UPDATE / DO NOTHING.
+ * Called automatically from boot() in src/db/index.ts on every cold start.
+ * Not a CLI entrypoint.
  */
 
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
 import * as schema from "./schema";
 import { brands, categories, products, stores, stockExceptions } from "@/test/fixtures";
+import type { PgliteDatabase } from "drizzle-orm/pglite";
 
-const DATABASE_URL = process.env.DATABASE_URL;
-if (!DATABASE_URL) {
-  console.error("Error: DATABASE_URL environment variable is not set.");
-  console.error("Set it before running: DATABASE_URL=postgresql://... pnpm db:seed");
-  process.exit(1);
-}
+type Db = PgliteDatabase<typeof schema>;
 
-const sql = neon(DATABASE_URL);
-const db = drizzle(sql, { schema });
-
-async function seed(): Promise<void> {
-  console.log("🌱 Seeding database…");
-
+export async function applySeed(db: Db): Promise<void> {
   // --- brands ---
   await db
     .insert(schema.brands)
@@ -49,7 +36,6 @@ async function seed(): Promise<void> {
         description: schema.brands.description,
       },
     });
-  console.log(`  ✔ brands: ${brands.length}`);
 
   // --- categories ---
   await db
@@ -74,7 +60,6 @@ async function seed(): Promise<void> {
         order: schema.categories.order,
       },
     });
-  console.log(`  ✔ categories: ${categories.length}`);
 
   // --- products ---
   await db
@@ -111,7 +96,6 @@ async function seed(): Promise<void> {
         featured: schema.products.featured,
       },
     });
-  console.log(`  ✔ products: ${products.length}`);
 
   // --- product_categories (junction) ---
   const junctionRows = products.flatMap((p) =>
@@ -121,7 +105,6 @@ async function seed(): Promise<void> {
     .insert(schema.productCategories)
     .values(junctionRows)
     .onConflictDoNothing();
-  console.log(`  ✔ product_categories: ${junctionRows.length}`);
 
   // --- product_images ---
   const imageRows = products.flatMap((p) =>
@@ -144,7 +127,6 @@ async function seed(): Promise<void> {
         sortOrder: schema.productImages.sortOrder,
       },
     });
-  console.log(`  ✔ product_images: ${imageRows.length}`);
 
   // --- product_variants ---
   const variantRows = products.flatMap((p) =>
@@ -178,7 +160,6 @@ async function seed(): Promise<void> {
         compareAtCurrency: schema.productVariants.compareAtCurrency,
       },
     });
-  console.log(`  ✔ product_variants: ${variantRows.length}`);
 
   // --- stores ---
   await db
@@ -213,13 +194,11 @@ async function seed(): Promise<void> {
         reference: schema.stores.reference,
       },
     });
-  console.log(`  ✔ stores: ${stores.length}`);
 
   // --- stock_levels (full variant × store cross-join + exceptions) ---
   const allVariantIds = products.flatMap((p) => p.variants.map((v) => v.id));
   const allStoreIds = stores.map((s) => s.id);
 
-  // Build exception lookup map
   const exceptionMap = new Map<string, "low_stock" | "out_of_stock">();
   for (const ex of stockExceptions) {
     exceptionMap.set(`${ex.variantId}:${ex.storeId}`, ex.status);
@@ -240,13 +219,4 @@ async function seed(): Promise<void> {
       target: [schema.stockLevels.variantId, schema.stockLevels.storeId],
       set: { status: schema.stockLevels.status },
     });
-  console.log(`  ✔ stock_levels: ${stockRows.length} (${allVariantIds.length} variants × ${allStoreIds.length} stores)`);
-
-  console.log("✅ Seed complete");
 }
-
-seed().catch((err: unknown) => {
-  const message = err instanceof Error ? err.message : String(err);
-  console.error("❌ Seed failed:", message);
-  process.exit(1);
-});

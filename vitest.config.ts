@@ -19,6 +19,8 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": resolve(__dirname, "./src"),
+      // server-only throws in non-RSC environments; Vitest runs in jsdom so stub it out.
+      "server-only": resolve(__dirname, "./src/test/server-only-stub.ts"),
     },
   },
 });

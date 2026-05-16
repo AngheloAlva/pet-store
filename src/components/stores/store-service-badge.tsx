@@ -1,6 +1,6 @@
 "use client";
 
-import { STORE_SERVICE_META } from "@/lib/stores";
+import { STORE_SERVICE_META } from "@/lib/stores-constants";
 import { cn } from "@/lib/utils";
 import type { StoreService } from "@/types";
 

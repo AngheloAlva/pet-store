@@ -16,38 +16,30 @@ const fixtureStockLevels = [
   ...makeStockLevels("rc-ma-15"),
 ];
 
-// Mock @/db/loaders — getCachedStockLevels returns fixture data by default.
-vi.mock("@/db/loaders", () => {
+// Mock @/db/sync-cache — getCachedStockLevels used by stock.ts sync helpers.
+vi.mock("@/db/sync-cache", () => {
   const fixtureStockLevelsRef: (StockLevel & { store: Store })[] = [];
   return {
-    loadAllStockLevels: vi.fn(async () => fixtureStockLevelsRef),
-    loadAllProducts: vi.fn(async () => []),
-    loadAllBrands: vi.fn(async () => []),
-    loadAllCategories: vi.fn(async () => []),
-    loadAllStores: vi.fn(async () => []),
     getCachedStockLevels: vi.fn(() => fixtureStockLevelsRef),
     getCachedProducts: vi.fn(() => []),
     getCachedBrands: vi.fn(() => []),
     getCachedCategories: vi.fn(() => []),
     getCachedStores: vi.fn(() => []),
-    initSyncCache: vi.fn(async () => {}),
+    setSyncCache: vi.fn(),
+    isInitialized: vi.fn(() => true),
   };
 });
 
-import * as loadersMock from "@/db/loaders";
+import * as syncCacheMock from "@/db/sync-cache";
 import {
   getProductStockMatrix,
-  getProductStockMatrixAsync,
   getVariantTotalStock,
-  getVariantTotalStockAsync,
   isVariantGloballyOutOfStock,
-  isVariantGloballyOutOfStockAsync,
 } from "./stock";
 
-// Helper: set what getCachedStockLevels and loadAllStockLevels return.
+// Helper: set what getCachedStockLevels returns.
 function setStockLevels(levels: (StockLevel & { store: Store })[]) {
-  vi.mocked(loadersMock.getCachedStockLevels).mockReturnValue(levels);
-  vi.mocked(loadersMock.loadAllStockLevels).mockResolvedValue(levels);
+  vi.mocked(syncCacheMock.getCachedStockLevels).mockReturnValue(levels);
 }
 
 afterEach(() => {
@@ -80,19 +72,6 @@ describe("getProductStockMatrix (sync)", () => {
     expect(maipu?.status).toBe("out_of_stock");
     const nunoa = rows.find((r) => r.store.id === "nunoa");
     expect(nunoa?.status).toBe("low_stock");
-  });
-});
-
-describe("getProductStockMatrixAsync", () => {
-  it("resolves to the same result as the sync version", async () => {
-    const sync = getProductStockMatrix("rc-ma-15");
-    const async_ = await getProductStockMatrixAsync("rc-ma-15");
-    expect(async_).toEqual(sync);
-  });
-
-  it("returns one row per store", async () => {
-    const rows = await getProductStockMatrixAsync("rc-ma-3");
-    expect(rows).toHaveLength(stores.length);
   });
 });
 
@@ -136,16 +115,6 @@ describe("isVariantGloballyOutOfStock (sync)", () => {
   });
 });
 
-describe("isVariantGloballyOutOfStockAsync", () => {
-  it("returns false for a variant available in some stores", async () => {
-    expect(await isVariantGloballyOutOfStockAsync("rc-ma-15")).toBe(false);
-  });
-
-  it("returns false when all stores are in_stock", async () => {
-    expect(await isVariantGloballyOutOfStockAsync("rc-ma-3")).toBe(false);
-  });
-});
-
 describe("getVariantTotalStock (sync)", () => {
   afterEach(() => {
     setStockLevels(fixtureStockLevels);
@@ -171,17 +140,5 @@ describe("getVariantTotalStock (sync)", () => {
       })),
     );
     expect(getVariantTotalStock("synthetic-oos")).toBe(0);
-  });
-});
-
-describe("getVariantTotalStockAsync", () => {
-  it("returns the same total as the sync version", async () => {
-    const sync = getVariantTotalStock("rc-ma-15");
-    const async_ = await getVariantTotalStockAsync("rc-ma-15");
-    expect(async_).toBe(sync);
-  });
-
-  it("returns stores.length * 99 for fully in_stock variant", async () => {
-    expect(await getVariantTotalStockAsync("rc-ma-3")).toBe(stores.length * 99);
   });
 });

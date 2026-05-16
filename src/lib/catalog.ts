@@ -16,31 +16,23 @@ import { cache } from "react";
 import {
   loadAllProducts,
   loadAllBrands,
+} from "@/db/loaders";
+import {
   getCachedProducts,
   getCachedBrands,
   getCachedCategories,
-} from "@/db/loaders";
+} from "@/db/sync-cache";
 
-export const PAGE_SIZE = 12;
-
-export const SORT_OPTIONS: ReadonlyArray<{ value: SortKey; label: string }> = [
-  { value: "relevancia", label: "Relevancia" },
-  { value: "precio-asc", label: "Menor precio" },
-  { value: "precio-desc", label: "Mayor precio" },
-  { value: "nombre", label: "Nombre (A–Z)" },
-  { value: "nuevos", label: "Novedades" },
-];
-
-export const PRICE_PRESETS: ReadonlyArray<{
-  value: string;
-  label: string;
-  range: [number, number];
-}> = [
-  { value: "0-10000", label: "Menos de $10.000", range: [0, 10000] },
-  { value: "10000-30000", label: "$10.000 – $30.000", range: [10000, 30000] },
-  { value: "30000-60000", label: "$30.000 – $60.000", range: [30000, 60000] },
-  { value: "60000-999999999", label: "Más de $60.000", range: [60000, 999_999_999] },
-];
+// Re-export pure constants + types so existing imports from "@/lib/catalog" still work.
+export {
+  PAGE_SIZE,
+  SORT_OPTIONS,
+  PRICE_PRESETS,
+  TAG_FILTER_OPTIONS,
+  SPECIES_LABELS,
+  type CategoryNode,
+} from "@/lib/catalog-constants";
+import { PAGE_SIZE as _PAGE_SIZE } from "@/lib/catalog-constants";
 
 // ---------------------------------------------------------------------------
 // Async helpers — backed by Drizzle loaders
@@ -150,12 +142,7 @@ export function getRelatedProducts(product: Product, limit = 4): Product[] {
   return scored.slice(0, limit).map((e) => e.product);
 }
 
-export type CategoryNode = {
-  category: Category;
-  children: Category[];
-};
-
-export function getCategoryTree(): CategoryNode[] {
+export function getCategoryTree() {
   return getTopLevelCategories().map((parent) => ({
     category: parent,
     children: getCachedCategories()
@@ -200,28 +187,6 @@ const tagMeta: Record<
 export function getTagMeta(tag: ProductTag) {
   return tagMeta[tag];
 }
-
-export const TAG_FILTER_OPTIONS: ReadonlyArray<{
-  value: ProductTag;
-  label: string;
-}> = [
-  { value: "sale", label: "Oferta" },
-  { value: "bestseller", label: "Más vendido" },
-  { value: "new", label: "Nuevo" },
-  { value: "natural", label: "Natural" },
-  { value: "grain-free", label: "Sin grano" },
-  { value: "exclusive", label: "Exclusivo" },
-];
-
-export const SPECIES_LABELS: Record<Species, string> = {
-  dog: "Perros",
-  cat: "Gatos",
-  bird: "Aves",
-  small_pet: "Pequeñas mascotas",
-  fish: "Peces",
-  reptile: "Reptiles",
-  other: "Otros",
-};
 
 function matchesQuery(product: Product, needle: string): boolean {
   if (!needle) return true;
@@ -301,10 +266,10 @@ export function queryProducts(query: CatalogQuery): QueryResult {
 
   const sorted = sortProducts(filtered, query.orden);
   const total = sorted.length;
-  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const pageCount = Math.max(1, Math.ceil(total / _PAGE_SIZE));
   const page = Math.max(1, query.page);
-  const start = (page - 1) * PAGE_SIZE;
-  const items = sorted.slice(start, start + PAGE_SIZE);
+  const start = (page - 1) * _PAGE_SIZE;
+  const items = sorted.slice(start, start + _PAGE_SIZE);
 
   return { items, total, page, pageCount };
 }

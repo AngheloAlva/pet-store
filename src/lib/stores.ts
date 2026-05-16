@@ -5,24 +5,17 @@
  * Sync helpers use getCachedStores() (pre-populated by initSyncCache in root layout).
  * Public signatures are unchanged — no call-site modifications needed.
  */
-import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
-import {
-  FirstAid,
-  Pill,
-  Scissors,
-  Storefront,
-} from "@phosphor-icons/react/dist/ssr";
 import type { Store, StoreService } from "@/types";
 import { cache } from "react";
-import { loadAllStores, getCachedStores } from "@/db/loaders";
+import { loadAllStores } from "@/db/loaders";
+import { getCachedStores } from "@/db/sync-cache";
 
-export const DEFAULT_MAP_VIEWPORT: {
-  center: [number, number];
-  zoom: number;
-} = {
-  center: [-70.65, -33.45],
-  zoom: 10,
-};
+// Re-export pure constants + types so existing imports from "@/lib/stores" still work.
+export {
+  DEFAULT_MAP_VIEWPORT,
+  STORE_SERVICE_META,
+  type StoreServiceMetaEntry,
+} from "@/lib/stores-constants";
 
 // ---------------------------------------------------------------------------
 // Async helpers (final API signatures)
@@ -60,15 +53,3 @@ export function getStoresCommuneSummary(): string {
 export function getStoresByService(service: StoreService): Store[] {
   return getCachedStores().filter((s) => s.services.includes(service));
 }
-
-export type StoreServiceMetaEntry = {
-  label: string;
-  Icon: PhosphorIcon;
-};
-
-export const STORE_SERVICE_META: Record<StoreService, StoreServiceMetaEntry> = {
-  shop: { label: "Tienda", Icon: Storefront },
-  vet: { label: "Veterinaria", Icon: FirstAid },
-  grooming: { label: "Peluquería", Icon: Scissors },
-  pharmacy: { label: "Farmacia", Icon: Pill },
-};

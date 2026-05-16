@@ -18,12 +18,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { SORT_OPTIONS } from "@/lib/catalog";
+import { SORT_OPTIONS } from "@/lib/catalog-constants";
 import type { SortKey } from "@/lib/url-params";
 import type { Brand, Category } from "@/types";
 import type { Species } from "@/types/common";
 import { CatalogFilters } from "./catalog-filters";
-import type { CategoryNode } from "@/lib/catalog";
+import type { CategoryNode } from "@/lib/catalog-constants";
 
 type CatalogToolbarProps = {
   resultCount: number;

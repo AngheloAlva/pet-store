@@ -1,9 +1,27 @@
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
+import path from "node:path";
+import { PGlite } from "@electric-sql/pglite";
+import { drizzle } from "drizzle-orm/pglite";
+import { migrate } from "drizzle-orm/pglite/migrator";
 import * as schema from "./schema";
-import { env } from "@/env";
+import { applySeed } from "./seed";
 
-// Module-level singleton — imported once per serverless function instance.
-// env.DATABASE_URL fails fast at import time if the variable is missing.
-const sql = neon(env.DATABASE_URL);
-export const db = drizzle(sql, { schema });
+declare global {
+  var __pglite: PGlite | undefined;
+  var __pgliteReady: Promise<void> | undefined;
+}
+
+const pglite = globalThis.__pglite ?? new PGlite();
+globalThis.__pglite = pglite;
+
+export const db = drizzle(pglite, { schema });
+
+async function boot(): Promise<void> {
+  await migrate(db, {
+    migrationsFolder: path.join(process.cwd(), "drizzle"),
+  });
+  await applySeed(db);
+}
+
+export const dbReady: Promise<void> =
+  globalThis.__pgliteReady ?? boot();
+globalThis.__pgliteReady = dbReady;

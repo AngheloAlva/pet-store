@@ -20,7 +20,7 @@ import {
   SPECIES_LABELS,
   TAG_FILTER_OPTIONS,
   type CategoryNode,
-} from "@/lib/catalog";
+} from "@/lib/catalog-constants";
 
 type CatalogFiltersProps = {
   brands: Brand[];

@@ -8,7 +8,7 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 
-// Mock the lib/catalog async helpers so tests don't need DATABASE_URL.
+// Mock the lib/catalog async helpers so tests run without a live DB.
 vi.mock("@/lib/catalog", async (importOriginal) => {
   const original = await importOriginal<typeof import("@/lib/catalog")>();
   return {
