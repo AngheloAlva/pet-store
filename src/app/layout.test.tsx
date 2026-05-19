@@ -6,6 +6,12 @@ vi.mock("next/font/google", () => ({
   Bricolage_Grotesque: () => ({ variable: "--font-heading" }),
 }));
 
+// SiteHeader is now an async RSC that calls getCurrentUser() → session.ts (server-only).
+// Mock it to avoid the SESSION_SECRET fail-fast guard in test environments.
+vi.mock("@/components/layout/site-header", () => ({
+  SiteHeader: () => null,
+}));
+
 import RootLayout from "./layout";
 
 // RootLayout is an async RSC. renderToReadableStream supports async components.

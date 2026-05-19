@@ -89,7 +89,8 @@ export async function verifySession(token: string): Promise<SessionPayload | nul
   const key = await keyPromise;
   let ok: boolean;
   try {
-    ok = await crypto.subtle.verify("HMAC", key, sigBytes, new TextEncoder().encode(data));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ok = await crypto.subtle.verify("HMAC", key, sigBytes as any, new TextEncoder().encode(data));
   } catch {
     return null;
   }

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { List, MagnifyingGlass, User, PawPrint } from "@phosphor-icons/react/dist/ssr";
+import { List, MagnifyingGlass, PawPrint } from "@phosphor-icons/react/dist/ssr";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -11,9 +11,12 @@ import {
 } from "@/components/ui/sheet";
 import { Container } from "./container";
 import { CartIndicator } from "./cart-indicator";
+import { PersonaSelector } from "./persona-selector";
+import { getCurrentUser } from "@/lib/session";
 import { siteConfig } from "@/lib/site";
 
-export function SiteHeader() {
+export async function SiteHeader() {
+  const currentUser = await getCurrentUser();
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/75">
       <Container className="flex h-16 items-center gap-4">
@@ -61,14 +64,7 @@ export function SiteHeader() {
           <Button variant="ghost" size="icon" aria-label="Buscar">
             <MagnifyingGlass size={20} />
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Mi cuenta"
-            render={<Link href="/cuenta" />}
-          >
-            <User size={20} />
-          </Button>
+          <PersonaSelector currentUser={currentUser} />
           <CartIndicator />
         </div>
       </Container>
