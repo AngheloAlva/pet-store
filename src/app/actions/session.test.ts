@@ -64,7 +64,7 @@ describe("switchPersona", () => {
 
     expect(result).toEqual({ ok: true });
     expect(mockSet).toHaveBeenCalledWith("sp_session", "mock.token", expect.any(Object));
-    expect(revalidatePath).toHaveBeenCalledWith("/");
+    expect(revalidatePath).toHaveBeenCalledWith("/", "layout");
   });
 
   it("unknown email → { ok: false, error: 'user_not_found' }, no cookie set", async () => {
@@ -111,7 +111,7 @@ describe("clearSession", () => {
     await clearSession();
 
     expect(mockDelete).toHaveBeenCalledWith("sp_session");
-    expect(revalidatePath).toHaveBeenCalledWith("/");
+    expect(revalidatePath).toHaveBeenCalledWith("/", "layout");
   });
 });
 

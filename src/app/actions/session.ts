@@ -48,7 +48,7 @@ export async function switchPersona(
 
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE_NAME, token, cookieOptions);
-  revalidatePath("/");
+  revalidatePath("/", "layout");
 
   return { ok: true };
 }
@@ -59,7 +59,7 @@ export async function switchPersona(
 export async function clearSession(): Promise<void> {
   const cookieStore = await cookies();
   cookieStore.delete(SESSION_COOKIE_NAME);
-  revalidatePath("/");
+  revalidatePath("/", "layout");
 }
 
 // ---------------------------------------------------------------------------
@@ -107,7 +107,7 @@ export async function createDemoAccount(formData: FormData): Promise<CreateDemoR
 
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE_NAME, token, cookieOptions);
-  revalidatePath("/");
+  revalidatePath("/", "layout");
 
   return { ok: true };
 }

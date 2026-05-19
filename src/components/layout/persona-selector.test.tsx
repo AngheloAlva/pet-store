@@ -50,4 +50,34 @@ describe("PersonaSelector", () => {
     expect(await screen.findByText("camila@demo.cl")).toBeInTheDocument();
     expect(await screen.findByText("Cerrar sesión")).toBeInTheDocument();
   });
+
+  it("clicking a persona item triggers switchPersona with that email", async () => {
+    const { switchPersona } = await import("@/app/actions/session");
+    const switchMock = vi.mocked(switchPersona);
+    switchMock.mockClear();
+
+    const user = userEvent.setup();
+    render(<PersonaSelector currentUser={null} />);
+
+    await user.click(screen.getByRole("button", { name: /cambiar persona/i }));
+    await user.click(await screen.findByText("Admin Demo"));
+
+    expect(switchMock).toHaveBeenCalledTimes(1);
+    const fd = switchMock.mock.calls[0]![0] as FormData;
+    expect(fd.get("email")).toBe("admin@demo.cl");
+  });
+
+  it("clicking 'Cerrar sesión' triggers clearSession", async () => {
+    const { clearSession } = await import("@/app/actions/session");
+    const clearMock = vi.mocked(clearSession);
+    clearMock.mockClear();
+
+    const user = userEvent.setup();
+    render(<PersonaSelector currentUser={mockUser} />);
+
+    await user.click(screen.getByRole("button", { name: /menú de usuario/i }));
+    await user.click(await screen.findByText("Cerrar sesión"));
+
+    expect(clearMock).toHaveBeenCalledTimes(1);
+  });
 });

@@ -51,7 +51,7 @@ export function PersonaSelector({ currentUser }: PersonaSelectorProps) {
           <DropdownMenuGroup>
             <DropdownMenuLabel>{currentUser.email}</DropdownMenuLabel>
             <DropdownMenuItem
-              onSelect={() =>
+              onClick={() =>
                 start(() => {
                   void clearSession();
                 })
@@ -67,7 +67,7 @@ export function PersonaSelector({ currentUser }: PersonaSelectorProps) {
               {SEED_PERSONAS.map((p) => (
                 <DropdownMenuItem
                   key={p.email}
-                  onSelect={() =>
+                  onClick={() =>
                     start(async () => {
                       const fd = new FormData();
                       fd.set("email", p.email);
