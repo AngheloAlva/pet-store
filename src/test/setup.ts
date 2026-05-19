@@ -17,7 +17,9 @@ vi.mock("@/db", () => ({
       stockLevels: { findMany: vi.fn(async () => []), findFirst: vi.fn(async () => undefined) },
       productVariants: { findMany: vi.fn(async () => []), findFirst: vi.fn(async () => undefined) },
       productImages: { findMany: vi.fn(async () => []), findFirst: vi.fn(async () => undefined) },
+      users: { findMany: vi.fn(async () => []), findFirst: vi.fn(async () => undefined) },
     },
+    insert: vi.fn(() => ({ values: vi.fn(async () => ({})) })),
   },
 }));
 
