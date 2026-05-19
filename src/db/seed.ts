@@ -14,6 +14,7 @@ import { seedPets } from "./seed-data/pets";
 import { seedPointsConfig, seedPointsTransactions } from "./seed-data/points";
 import { seedDemoEmails } from "./seed-data/demo-emails";
 import { seedRestockAlerts } from "./seed-data/restock-alerts";
+import { seedBlogPosts, seedBlogPostProducts } from "./seed-data/blog-posts";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 type Db = PgliteDatabase<typeof schema>;
@@ -371,4 +372,34 @@ export async function applySeed(db: Db): Promise<void> {
         canceledAt: schema.restockAlerts.canceledAt,
       },
     });
+
+  // --- blog_posts (10 posts: 8 published, 2 drafts) ---
+  await db
+    .insert(schema.blogPosts)
+    .values(seedBlogPosts)
+    .onConflictDoUpdate({
+      target: schema.blogPosts.id,
+      set: {
+        slug: schema.blogPosts.slug,
+        title: schema.blogPosts.title,
+        excerpt: schema.blogPosts.excerpt,
+        bodyMarkdown: schema.blogPosts.bodyMarkdown,
+        heroImageUrl: schema.blogPosts.heroImageUrl,
+        category: schema.blogPosts.category,
+        species: schema.blogPosts.species,
+        tags: schema.blogPosts.tags,
+        authorName: schema.blogPosts.authorName,
+        status: schema.blogPosts.status,
+        publishedAt: schema.blogPosts.publishedAt,
+        updatedAt: schema.blogPosts.updatedAt,
+      },
+    });
+
+  // --- blog_post_products (16-24 join rows) ---
+  if (seedBlogPostProducts.length > 0) {
+    await db
+      .insert(schema.blogPostProducts)
+      .values(seedBlogPostProducts)
+      .onConflictDoNothing();
+  }
 }

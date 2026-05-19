@@ -9,6 +9,7 @@ const footerLinks = [
     title: "Tienda",
     links: [
       { label: "Catálogo", href: "/catalogo" },
+      { label: "Blog", href: "/blog" },
       { label: "Sucursales", href: "/sucursales" },
       { label: "Servicios", href: "/servicios" },
     ],

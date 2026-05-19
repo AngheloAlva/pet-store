@@ -13,6 +13,15 @@ import {
 import { relations } from "drizzle-orm";
 
 // ---------------------------------------------------------------------------
+// blog constants
+// ---------------------------------------------------------------------------
+export const BLOG_CATEGORY = ["cuidados", "alimentacion", "salud", "novedades"] as const;
+export type BlogCategory = (typeof BLOG_CATEGORY)[number];
+
+export const BLOG_STATUS = ["draft", "published", "archived"] as const;
+export type BlogStatus = (typeof BLOG_STATUS)[number];
+
+// ---------------------------------------------------------------------------
 // pets constants
 // ---------------------------------------------------------------------------
 export const SPECIES = ["dog", "cat", "exotic"] as const;
@@ -436,6 +445,52 @@ export const demoEmails = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// blog_posts
+// ---------------------------------------------------------------------------
+export const blogPosts = pgTable(
+  "blog_posts",
+  {
+    id: text("id").primaryKey(),
+    slug: text("slug").notNull().unique(),
+    title: text("title").notNull(),
+    excerpt: text("excerpt").notNull(),
+    bodyMarkdown: text("body_markdown").notNull(),
+    heroImageUrl: text("hero_image_url"),
+    category: text("category").notNull(),
+    species: text("species").array().notNull().default([]),
+    tags: text("tags").array().notNull().default([]),
+    authorName: text("author_name").notNull(),
+    status: text("status").notNull().default("draft"),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("idx_blog_posts_status_published_at").on(t.status, t.publishedAt),
+    index("idx_blog_posts_category").on(t.category),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// blog_post_products (junction: blog_post ↔ product)
+// ---------------------------------------------------------------------------
+export const blogPostProducts = pgTable(
+  "blog_post_products",
+  {
+    postId: text("post_id")
+      .notNull()
+      .references(() => blogPosts.id, { onDelete: "cascade" }),
+    productId: text("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+  },
+  (t) => [
+    primaryKey({ columns: [t.postId, t.productId] }),
+    index("idx_blog_post_products_product_id").on(t.productId),
+  ],
+);
+
+// ---------------------------------------------------------------------------
 // Relations
 // ---------------------------------------------------------------------------
 export const brandsRelations = relations(brands, ({ many }) => ({
@@ -603,5 +658,20 @@ export const restockAlertsRelations = relations(restockAlerts, ({ one }) => ({
   variant: one(productVariants, {
     fields: [restockAlerts.variantId],
     references: [productVariants.id],
+  }),
+}));
+
+export const blogPostsRelations = relations(blogPosts, ({ many }) => ({
+  blogPostProducts: many(blogPostProducts),
+}));
+
+export const blogPostProductsRelations = relations(blogPostProducts, ({ one }) => ({
+  post: one(blogPosts, {
+    fields: [blogPostProducts.postId],
+    references: [blogPosts.id],
+  }),
+  product: one(products, {
+    fields: [blogPostProducts.productId],
+    references: [products.id],
   }),
 }));

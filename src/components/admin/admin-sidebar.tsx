@@ -10,6 +10,7 @@ import {
   CalendarCheck,
   PawPrint,
   Star,
+  Newspaper,
 } from "@phosphor-icons/react/dist/ssr";
 
 const NAV_ITEMS = [
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
   { label: "Citas", href: "/admin/citas", icon: CalendarCheck, disabled: false },
   { label: "Mascotas", href: "/admin/mascotas", icon: PawPrint, disabled: false },
   { label: "Puntos", href: "/admin/puntos", icon: Star, disabled: false },
+  { label: "Blog", href: "/admin/blog", icon: Newspaper, disabled: false },
   { label: "Usuarios", href: "/admin/usuarios", icon: Users, disabled: false },
 ] as const;
 

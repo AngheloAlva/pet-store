@@ -164,3 +164,55 @@ describe("migration 0003 — pets + points", () => {
     expect(after[0].snapshot).toBe("FK Pet"); // snapshot preserved
   });
 });
+
+describe("migration 0006 — blog", () => {
+  it("S-SCHEMA-2: blog_post_products CASCADE on product delete removes link, leaves post", async () => {
+    const db = await createTestDb();
+
+    await db.insert(schema.brands).values({
+      id: "brand-cascade",
+      slug: "brand-cascade",
+      name: "Cascade Brand",
+    });
+
+    await db.insert(schema.products).values({
+      id: "prod-cascade",
+      slug: "prod-cascade",
+      name: "Cascade Product",
+      brandId: "brand-cascade",
+      description: "Cascade product description",
+      species: ["dog"],
+    });
+
+    await db.insert(schema.blogPosts).values({
+      id: "post-cascade",
+      slug: "post-cascade",
+      title: "Cascade Post",
+      excerpt: "Excerpt",
+      bodyMarkdown: "Body",
+      category: "cuidados",
+      authorName: "Test",
+      status: "published",
+    });
+
+    await db.insert(schema.blogPostProducts).values({
+      postId: "post-cascade",
+      productId: "prod-cascade",
+    });
+
+    const linksBefore = await db.select().from(schema.blogPostProducts);
+    expect(linksBefore).toHaveLength(1);
+
+    await db.delete(schema.products).where(eq(schema.products.id, "prod-cascade"));
+
+    const linksAfter = await db.select().from(schema.blogPostProducts);
+    expect(linksAfter).toHaveLength(0);
+
+    const postAfter = await db
+      .select()
+      .from(schema.blogPosts)
+      .where(eq(schema.blogPosts.id, "post-cascade"));
+    expect(postAfter).toHaveLength(1);
+    expect(postAfter[0].title).toBe("Cascade Post");
+  });
+});

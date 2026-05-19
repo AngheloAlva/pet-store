@@ -105,4 +105,32 @@ describe("seed determinism", () => {
     expect(seedAppointments.find((a) => a.id === "appt-camila-upcoming")).toBeDefined();
     expect(seedAppointments.find((a) => a.id === "appt-camila-past")).toBeDefined();
   });
+
+  // ---------------------------------------------------------------------------
+  // S-SEED-1 Blog posts seed
+  // ---------------------------------------------------------------------------
+  it("S-SEED-1: blog posts seed has 10 rows", async () => {
+    const { seedBlogPosts } = await import("@/db/seed-data/blog-posts");
+    expect(seedBlogPosts.length).toBe(10);
+  });
+
+  it("S-SEED-1: status distribution — 8 published, 2 draft", async () => {
+    const { seedBlogPosts } = await import("@/db/seed-data/blog-posts");
+    const published = seedBlogPosts.filter((p) => p.status === "published");
+    const drafts = seedBlogPosts.filter((p) => p.status === "draft");
+    expect(published.length).toBe(8);
+    expect(drafts.length).toBe(2);
+  });
+
+  it("S-SEED-1: blog_post_products has between 16 and 24 rows", async () => {
+    const { seedBlogPostProducts } = await import("@/db/seed-data/blog-posts");
+    expect(seedBlogPostProducts.length).toBeGreaterThanOrEqual(16);
+    expect(seedBlogPostProducts.length).toBeLessThanOrEqual(24);
+  });
+
+  it("S-SEED-1: all blog post IDs are deterministic", async () => {
+    const { seedBlogPosts } = await import("@/db/seed-data/blog-posts");
+    const allDeterministic = seedBlogPosts.every((p) => p.id.startsWith("blog-post-"));
+    expect(allDeterministic).toBe(true);
+  });
 });

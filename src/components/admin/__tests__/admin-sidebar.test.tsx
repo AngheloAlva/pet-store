@@ -85,4 +85,24 @@ describe("AdminSidebar — Productos link (S22/R17)", () => {
     expect(link).toHaveAttribute("href", "/admin/usuarios");
     expect(link).not.toHaveAttribute("aria-disabled");
   });
+
+  it("Blog link has href='/admin/blog' (12.1)", () => {
+    render(<AdminSidebar />);
+    const link = screen
+      .getAllByRole("link")
+      .find((el) => el.textContent?.includes("Blog"));
+    expect(link).toHaveAttribute("href", "/admin/blog");
+    expect(link).not.toHaveAttribute("aria-disabled");
+  });
+
+  it("Blog link appears between Puntos and Usuarios (12.1)", () => {
+    render(<AdminSidebar />);
+    const links = screen.getAllByRole("link");
+    const labels = links.map((l) => l.textContent?.trim() ?? "");
+    const blogIdx = labels.findIndex((l) => l.includes("Blog"));
+    const puntosIdx = labels.findIndex((l) => l.includes("Puntos"));
+    const usuariosIdx = labels.findIndex((l) => l.includes("Usuarios"));
+    expect(blogIdx).toBeGreaterThan(puntosIdx);
+    expect(blogIdx).toBeLessThan(usuariosIdx);
+  });
 });
