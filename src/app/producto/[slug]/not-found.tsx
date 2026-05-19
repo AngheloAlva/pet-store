@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { PawPrint } from "@phosphor-icons/react/dist/ssr";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Container } from "@/components/layout/container";
+import { cn } from "@/lib/utils";
 
 export default function NotFoundProduct() {
   return (
@@ -17,9 +18,9 @@ export default function NotFoundProduct() {
           El producto que buscás no existe o fue movido. Volvé al catálogo para
           seguir explorando.
         </p>
-        <Button className="mt-6" render={<Link href="/catalogo" />}>
+        <Link href="/catalogo" className={cn(buttonVariants(), "mt-6")}>
           Ir al catálogo
-        </Button>
+        </Link>
       </div>
     </Container>
   );

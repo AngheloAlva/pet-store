@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PawPrint } from "@phosphor-icons/react/dist/ssr";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Container } from "@/components/layout/container";
+import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Página no encontrada",
@@ -22,9 +23,9 @@ export default function NotFound() {
           La página que buscás no existe o fue movida. Volvé al inicio para
           seguir explorando.
         </p>
-        <Button className="mt-6" render={<Link href="/" />}>
+        <Link href="/" className={cn(buttonVariants(), "mt-6")}>
           Ir al inicio
-        </Button>
+        </Link>
       </div>
     </Container>
   );

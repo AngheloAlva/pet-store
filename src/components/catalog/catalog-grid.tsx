@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { MagnifyingGlassMinus } from "@phosphor-icons/react/dist/ssr";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   Empty,
   EmptyHeader,
@@ -30,9 +31,9 @@ export function CatalogGrid({ products }: CatalogGridProps) {
           </EmptyDescription>
         </EmptyHeader>
         <EmptyContent>
-          <Button variant="outline" render={<Link href="/catalogo" />}>
+          <Link href="/catalogo" className={cn(buttonVariants({ variant: "outline" }))}>
             Limpiar filtros
-          </Button>
+          </Link>
         </EmptyContent>
       </Empty>
     );

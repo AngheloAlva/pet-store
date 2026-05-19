@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { ArrowRight, MapPin } from "@phosphor-icons/react/dist/ssr";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Container } from "@/components/layout/container";
+import { cn } from "@/lib/utils";
 
 export function HeroSection() {
   return (
@@ -25,14 +26,17 @@ export function HeroSection() {
             en tus sucursales favoritas de Santiago.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Button size="lg" render={<Link href="/catalogo" />}>
+            <Link href="/catalogo" className={cn(buttonVariants({ size: "lg" }))}>
               Ver catálogo
               <ArrowRight size={18} />
-            </Button>
-            <Button size="lg" variant="outline" render={<Link href="/sucursales" />}>
+            </Link>
+            <Link
+              href="/sucursales"
+              className={cn(buttonVariants({ size: "lg", variant: "outline" }))}
+            >
               <MapPin size={18} />
               Sucursales
-            </Button>
+            </Link>
           </div>
         </div>
       </Container>

@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Container } from "@/components/layout/container";
+import { cn } from "@/lib/utils";
 import { ProductCard } from "@/components/product/product-card";
 import { getFeaturedProducts } from "@/lib/catalog";
 
@@ -21,10 +22,13 @@ export function PopularProducts() {
               Los favoritos de la comunidad SimplePet.
             </p>
           </div>
-          <Button variant="ghost" size="sm" render={<Link href="/catalogo" />}>
+          <Link
+            href="/catalogo"
+            className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
+          >
             Ver todos
             <ArrowRight size={14} />
-          </Button>
+          </Link>
         </div>
 
         <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">

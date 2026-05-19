@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { Stethoscope, Scissors, ArrowRight } from "@phosphor-icons/react/dist/ssr";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Container } from "@/components/layout/container";
+import { cn } from "@/lib/utils";
 
 export function ServicesBanner() {
   return (
@@ -27,13 +28,16 @@ export function ServicesBanner() {
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
-              <Button size="lg" render={<Link href="/servicios" />}>
+              <Link href="/servicios" className={cn(buttonVariants({ size: "lg" }))}>
                 Ver servicios
                 <ArrowRight size={18} />
-              </Button>
-              <Button size="lg" variant="outline" render={<Link href="/sucursales" />}>
+              </Link>
+              <Link
+                href="/sucursales"
+                className={cn(buttonVariants({ size: "lg", variant: "outline" }))}
+              >
                 Buscar sucursal
-              </Button>
+              </Link>
             </div>
           </div>
         </div>

@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { ShoppingCartSimple } from "@phosphor-icons/react";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export function EmptyCart() {
   return (
@@ -14,7 +15,9 @@ export function EmptyCart() {
           Explorá el catálogo y sumá productos para tu mascota.
         </p>
       </div>
-      <Button render={<Link href="/catalogo" />}>Ver catálogo</Button>
+      <Link href="/catalogo" className={cn(buttonVariants())}>
+        Ver catálogo
+      </Link>
     </div>
   );
 }

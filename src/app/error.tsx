@@ -2,8 +2,9 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Container } from "@/components/layout/container";
+import { cn } from "@/lib/utils";
 
 type Props = {
   error: Error & { digest?: string };
@@ -31,9 +32,9 @@ export default function GlobalError({ error, reset }: Props) {
           <Button type="button" onClick={() => reset()}>
             Reintentar
           </Button>
-          <Button variant="outline" render={<Link href="/" />}>
+          <Link href="/" className={cn(buttonVariants({ variant: "outline" }))}>
             Ir al inicio
-          </Button>
+          </Link>
         </div>
       </div>
     </Container>

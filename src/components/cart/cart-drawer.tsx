@@ -9,7 +9,8 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { useHydrated } from "@/lib/use-hydrated";
 import { selectItems, selectIsOpen, useCartStore } from "@/stores/cart";
 import { CartLineItem } from "./cart-line-item";
@@ -51,14 +52,13 @@ export function CartDrawer() {
             </ul>
             <SheetFooter className="border-t border-border">
               <CartSummary />
-              <Button
-                variant="outline"
-                className="w-full"
-                render={<Link href="/carrito" />}
+              <Link
+                href="/carrito"
                 onClick={() => setOpen(false)}
+                className={cn(buttonVariants({ variant: "outline" }), "w-full")}
               >
                 Ver carrito completo
-              </Button>
+              </Link>
             </SheetFooter>
           </>
         )}
