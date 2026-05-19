@@ -12,6 +12,29 @@ import {
 import { relations } from "drizzle-orm";
 
 // ---------------------------------------------------------------------------
+// users
+// ---------------------------------------------------------------------------
+export const USER_ROLES = {
+  CUSTOMER: "customer",
+  ADMIN: "admin",
+  STAFF: "staff",
+} as const;
+
+export type UserRole = (typeof USER_ROLES)[keyof typeof USER_ROLES];
+
+export const users = pgTable("users", {
+  id: text("id").primaryKey(),
+  email: text("email").notNull().unique(),
+  name: text("name").notNull(),
+  rut: text("rut"),
+  phone: text("phone"),
+  role: text("role").notNull().default(USER_ROLES.CUSTOMER),
+  storeId: text("store_id").references(() => stores.id),
+  isDemoSeed: boolean("is_demo_seed").notNull().default(false),
+  createdAt: text("created_at").notNull(),
+});
+
+// ---------------------------------------------------------------------------
 // brands
 // ---------------------------------------------------------------------------
 export const brands = pgTable("brands", {
@@ -209,6 +232,11 @@ export const productVariantsRelations = relations(productVariants, ({ one, many 
 
 export const storesRelations = relations(stores, ({ many }) => ({
   stockLevels: many(stockLevels),
+  users: many(users),
+}));
+
+export const usersRelations = relations(users, ({ one }) => ({
+  store: one(stores, { fields: [users.storeId], references: [stores.id] }),
 }));
 
 export const stockLevelsRelations = relations(stockLevels, ({ one }) => ({
