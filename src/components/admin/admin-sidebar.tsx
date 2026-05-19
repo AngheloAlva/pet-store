@@ -5,13 +5,19 @@ import {
   Tag,
   Storefront,
   Users,
+  Scissors,
+  Clock,
+  CalendarCheck,
 } from "@phosphor-icons/react/dist/ssr";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/admin", icon: SquaresFour, disabled: false },
   { label: "Productos", href: "/admin/productos", icon: Package, disabled: false },
+  { label: "Servicios", href: "/admin/servicios", icon: Scissors, disabled: false },
   { label: "Categorías", href: "/admin/categorias", icon: Tag, disabled: false },
   { label: "Sucursales", href: "/admin/sucursales", icon: Storefront, disabled: false },
+  { label: "Horarios", href: "/admin/horarios", icon: Clock, disabled: false },
+  { label: "Citas", href: "/admin/citas", icon: CalendarCheck, disabled: false },
   { label: "Usuarios", href: "/admin/usuarios", icon: Users, disabled: false },
 ] as const;
 

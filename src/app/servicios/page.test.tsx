@@ -28,11 +28,11 @@ describe("servicios page", () => {
     }
   });
 
-  it("renders a próximamente banner mentioning agendamiento", () => {
+  it("renders a 'Reservar una cita' CTA linking to /agendar", () => {
     render(<ServiciosPage />);
-    const banner = screen.getByText(/próximamente/i);
-    expect(banner).toBeInTheDocument();
-    expect(document.body.textContent?.toLowerCase()).toContain("agendamiento");
+    const cta = screen.getByRole("link", { name: /reservar una cita/i });
+    expect(cta).toBeInTheDocument();
+    expect(cta.getAttribute("href")).toBe("/agendar");
   });
 
   it("exposes a canonical alternate", () => {

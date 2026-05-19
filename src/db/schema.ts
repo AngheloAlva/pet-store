@@ -8,6 +8,7 @@ import {
   pgTable,
   primaryKey,
   text,
+  timestamp,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -178,6 +179,112 @@ export const stockLevels = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// APPOINTMENT_STATUS
+// ---------------------------------------------------------------------------
+export const APPOINTMENT_STATUS = {
+  SCHEDULED: "scheduled",
+  ATTENDED: "attended",
+  CANCELED: "canceled",
+  NO_SHOW: "no_show",
+} as const;
+
+export type AppointmentStatus = (typeof APPOINTMENT_STATUS)[keyof typeof APPOINTMENT_STATUS];
+
+// ---------------------------------------------------------------------------
+// services
+// ---------------------------------------------------------------------------
+export const services = pgTable("services", {
+  id: text("id").primaryKey(),
+  slug: text("slug").notNull().unique(),
+  name: text("name").notNull(),
+  description: text("description"),
+  durationMin: integer("duration_min").notNull(),
+  priceCents: integer("price_cents").notNull(),
+  requiresPet: boolean("requires_pet").notNull().default(false),
+  species: text("species").array().notNull().default([]),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ---------------------------------------------------------------------------
+// schedule_configs
+// ---------------------------------------------------------------------------
+export const scheduleConfigs = pgTable(
+  "schedule_configs",
+  {
+    id: text("id").primaryKey(),
+    storeId: text("store_id")
+      .notNull()
+      .references(() => stores.id, { onDelete: "cascade" }),
+    // null = store-wide default; non-null = service-specific override
+    serviceId: text("service_id").references(() => services.id),
+    weekday: integer("weekday").notNull(), // 0=Sunday, 6=Saturday
+    startHHMM: integer("start_hhmm").notNull(), // e.g. 900 = 09:00
+    endHHMM: integer("end_hhmm").notNull(), // must be > startHHMM
+    slotMinutes: integer("slot_minutes").notNull(),
+    active: boolean("active").notNull().default(true),
+  },
+  (t) => [
+    index("idx_schedule_configs_store_service_weekday").on(
+      t.storeId,
+      t.serviceId,
+      t.weekday,
+    ),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// blocked_slots
+// Note: endsAt must be > startsAt (enforced at application level)
+// ---------------------------------------------------------------------------
+export const blockedSlots = pgTable("blocked_slots", {
+  id: text("id").primaryKey(),
+  storeId: text("store_id")
+    .notNull()
+    .references(() => stores.id, { onDelete: "cascade" }),
+  // null = blocks all services at this store during the window
+  serviceId: text("service_id").references(() => services.id),
+  startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+  endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
+  reason: text("reason"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ---------------------------------------------------------------------------
+// appointments
+// ---------------------------------------------------------------------------
+export const appointments = pgTable(
+  "appointments",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id),
+    // petId nullable until F2.4 adds pets table
+    petId: text("pet_id"),
+    petNameSnapshot: text("pet_name_snapshot"),
+    serviceId: text("service_id")
+      .notNull()
+      .references(() => services.id),
+    storeId: text("store_id")
+      .notNull()
+      .references(() => stores.id),
+    startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+    endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
+    status: text("status").notNull().default(APPOINTMENT_STATUS.SCHEDULED),
+    notes: text("notes"),
+    cancelReason: text("cancel_reason"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("idx_appointments_store_starts_at").on(t.storeId, t.startsAt),
+    index("idx_appointments_user_starts_at").on(t.userId, t.startsAt),
+  ],
+);
+
+// ---------------------------------------------------------------------------
 // Relations
 // ---------------------------------------------------------------------------
 export const brandsRelations = relations(brands, ({ many }) => ({
@@ -233,10 +340,14 @@ export const productVariantsRelations = relations(productVariants, ({ one, many 
 export const storesRelations = relations(stores, ({ many }) => ({
   stockLevels: many(stockLevels),
   users: many(users),
+  scheduleConfigs: many(scheduleConfigs),
+  blockedSlots: many(blockedSlots),
+  appointments: many(appointments),
 }));
 
-export const usersRelations = relations(users, ({ one }) => ({
+export const usersRelations = relations(users, ({ one, many }) => ({
   store: one(stores, { fields: [users.storeId], references: [stores.id] }),
+  appointments: many(appointments),
 }));
 
 export const stockLevelsRelations = relations(stockLevels, ({ one }) => ({
@@ -246,6 +357,49 @@ export const stockLevelsRelations = relations(stockLevels, ({ one }) => ({
   }),
   store: one(stores, {
     fields: [stockLevels.storeId],
+    references: [stores.id],
+  }),
+}));
+
+export const servicesRelations = relations(services, ({ many }) => ({
+  scheduleConfigs: many(scheduleConfigs),
+  blockedSlots: many(blockedSlots),
+  appointments: many(appointments),
+}));
+
+export const scheduleConfigsRelations = relations(scheduleConfigs, ({ one }) => ({
+  store: one(stores, {
+    fields: [scheduleConfigs.storeId],
+    references: [stores.id],
+  }),
+  service: one(services, {
+    fields: [scheduleConfigs.serviceId],
+    references: [services.id],
+  }),
+}));
+
+export const blockedSlotsRelations = relations(blockedSlots, ({ one }) => ({
+  store: one(stores, {
+    fields: [blockedSlots.storeId],
+    references: [stores.id],
+  }),
+  service: one(services, {
+    fields: [blockedSlots.serviceId],
+    references: [services.id],
+  }),
+}));
+
+export const appointmentsRelations = relations(appointments, ({ one }) => ({
+  user: one(users, {
+    fields: [appointments.userId],
+    references: [users.id],
+  }),
+  service: one(services, {
+    fields: [appointments.serviceId],
+    references: [services.id],
+  }),
+  store: one(stores, {
+    fields: [appointments.storeId],
     references: [stores.id],
   }),
 }));

@@ -18,16 +18,38 @@ vi.mock("@/db", () => ({
       productVariants: { findMany: vi.fn(async () => []), findFirst: vi.fn(async () => undefined) },
       productImages: { findMany: vi.fn(async () => []), findFirst: vi.fn(async () => undefined) },
       users: { findMany: vi.fn(async () => []), findFirst: vi.fn(async () => undefined) },
+      services: { findMany: vi.fn(async () => []), findFirst: vi.fn(async () => undefined) },
+      scheduleConfigs: { findMany: vi.fn(async () => []), findFirst: vi.fn(async () => undefined) },
+      blockedSlots: { findMany: vi.fn(async () => []), findFirst: vi.fn(async () => undefined) },
+      appointments: { findMany: vi.fn(async () => []), findFirst: vi.fn(async () => undefined) },
     },
+    select: vi.fn(() => ({
+      from: vi.fn(() => ({
+        where: vi.fn(async () => []),
+        leftJoin: vi.fn(() => ({
+          leftJoin: vi.fn(() => ({
+            leftJoin: vi.fn(() => ({
+              where: vi.fn(async () => []),
+            })),
+          })),
+        })),
+      })),
+    })),
     insert: vi.fn(() => ({ values: vi.fn(async () => ({})) })),
     update: vi.fn(() => ({ set: vi.fn(() => ({ where: vi.fn(async () => ({})) })) })),
     delete: vi.fn(() => ({ where: vi.fn(async () => ({})) })),
     transaction: vi.fn(async (cb: (tx: unknown) => Promise<unknown>) => cb({
+      select: vi.fn(() => ({
+        from: vi.fn(() => ({
+          where: vi.fn(async () => []),
+        })),
+      })),
       insert: vi.fn(() => ({ values: vi.fn(async () => ({})) })),
       update: vi.fn(() => ({ set: vi.fn(() => ({ where: vi.fn(async () => ({})) })) })),
       delete: vi.fn(() => ({ where: vi.fn(async () => ({})) })),
     })),
   },
+  dbReady: Promise.resolve(),
 }));
 
 // Mock @/db/loaders with fixture data so all sync lib helpers work without a DB.

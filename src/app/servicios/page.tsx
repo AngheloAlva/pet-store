@@ -39,10 +39,14 @@ export default function ServiciosPage() {
           Más que una tienda: cuidamos a tu mascota en cada etapa. Consultá qué
           ofrece cada sucursal y acercate cuando lo necesites.
         </p>
-        <p className="mt-4 inline-flex items-center gap-2 rounded-full border border-border bg-muted/40 px-3 py-1 text-xs font-medium text-muted-foreground">
-          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-          Próximamente: agendamiento online
-        </p>
+        <div className="mt-4">
+          <Link
+            href="/agendar"
+            className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+          >
+            Reservar una cita
+          </Link>
+        </div>
       </header>
 
       <div className="grid gap-6 md:grid-cols-2">

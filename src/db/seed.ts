@@ -7,6 +7,9 @@
 import * as schema from "./schema";
 import { brands, categories, products, stores, stockExceptions } from "@/test/fixtures";
 import { personas } from "./seed-data/personas";
+import { seedServices } from "./seed-data/services";
+import { seedScheduleConfigs, seedBlockedSlots } from "./seed-data/schedule-configs";
+import { seedAppointments } from "./seed-data/appointments";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 type Db = PgliteDatabase<typeof schema>;
@@ -232,6 +235,62 @@ export async function applySeed(db: Db): Promise<void> {
         email: schema.users.email,
         role: schema.users.role,
         storeId: schema.users.storeId,
+      },
+    });
+
+  // --- services ---
+  await db
+    .insert(schema.services)
+    .values(seedServices)
+    .onConflictDoUpdate({
+      target: schema.services.id,
+      set: {
+        slug: schema.services.slug,
+        name: schema.services.name,
+        description: schema.services.description,
+        durationMin: schema.services.durationMin,
+        priceCents: schema.services.priceCents,
+        requiresPet: schema.services.requiresPet,
+        species: schema.services.species,
+        active: schema.services.active,
+      },
+    });
+
+  // --- schedule_configs ---
+  await db
+    .insert(schema.scheduleConfigs)
+    .values(seedScheduleConfigs)
+    .onConflictDoUpdate({
+      target: schema.scheduleConfigs.id,
+      set: {
+        startHHMM: schema.scheduleConfigs.startHHMM,
+        endHHMM: schema.scheduleConfigs.endHHMM,
+        slotMinutes: schema.scheduleConfigs.slotMinutes,
+        active: schema.scheduleConfigs.active,
+      },
+    });
+
+  // --- blocked_slots ---
+  await db
+    .insert(schema.blockedSlots)
+    .values(seedBlockedSlots)
+    .onConflictDoUpdate({
+      target: schema.blockedSlots.id,
+      set: {
+        reason: schema.blockedSlots.reason,
+      },
+    });
+
+  // --- appointments ---
+  await db
+    .insert(schema.appointments)
+    .values(seedAppointments)
+    .onConflictDoUpdate({
+      target: schema.appointments.id,
+      set: {
+        status: schema.appointments.status,
+        notes: schema.appointments.notes,
+        cancelReason: schema.appointments.cancelReason,
       },
     });
 }
