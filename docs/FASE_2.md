@@ -1,337 +1,256 @@
-# Fase 2 — Lo que te Diferencia
+# Fase 2 — Lo que te Diferencia (adaptada a PGlite / demo autocontenido)
 
-> Objetivo: agregar las features que ninguna solución genérica ofrece para tiendas de mascotas.
-> Aquí se introduce el backend real, base de datos y autenticación.
-> Tiempo estimado: 6-8 semanas
+> Objetivo: agregar las features que ninguna solución genérica ofrece para tiendas de mascotas,
+> manteniendo el demo 100% autocontenido (sin credenciales externas, sin infraestructura paga).
+> Tiempo estimado: 4-6 semanas (más corto que el plan original porque sale Better Auth, Resend, OAuth, R2 y Cron).
 
 ---
 
-## Cambios de Infraestructura
+## Principio rector
 
-En la Fase 1 todo era estático. Ahora se necesita persistencia real:
+**Todo es efímero, y eso ES la feature.** PGlite reinicia el estado en cada cold start del server.
+En vez de pelear contra eso, lo abrazamos: cada visitante encuentra una demo prístina, puede romper
+lo que quiera (crear productos, agendar citas, canjear puntos), y al rato vuelve todo a su lugar.
 
-| Componente | Tecnología | Notas |
-|-----------|------------|-------|
-| Base de datos | PostgreSQL (Neon) | |
-| ORM | Prisma o Drizzle | Drizzle es más liviano y type-safe |
-| Auth (Better Auth) | Login con email/password + Google + RUT para clientes en tienda |
-| Email | Resend | Transaccional: confirmaciones, recordatorios, restock |
-| Storage | Cloudflare R2 | Imágenes de productos |
-| Cron jobs | Vercel Cron | Recordatorios de citas, emails programados |
-| Estado global | Zustand (se mantiene de Fase 1) | Ahora sincronizado con el backend |
+Para un demo de ventas esto es oro: el dueño de tienda ve QUE TODO FUNCIONA, sin que te cueste
+un peso ni dependencias externas.
 
-**Migración de datos estáticos a BD:**
-Los seed data de la Fase 1 se convierten en migraciones de Prisma/Drizzle. La estructura de tipos se mantiene casi igual, solo se agregan relaciones y timestamps.
+---
+
+## Cambios de Infraestructura (vs. plan original)
+
+| Componente | Plan original | Plan adaptado | Por qué |
+|-----------|---------------|---------------|---------|
+| Base de datos | PostgreSQL (Neon) | **PGlite in-memory** (ya migrado en slice-9) | Sin credenciales, reseed en cold start |
+| ORM | Drizzle | **Drizzle** (sin cambios) | Funciona idéntico contra PGlite |
+| Auth | Better Auth (email+pwd, Google, RUT) | **Demo Personas** (selector visible, cookie firmada) | Demo no necesita auth real, ahorra ~5 días de trabajo |
+| Email | Resend (transaccional) | **Fake Inbox** en `/demo/inbox` | Pedagógico; muestra QUÉ recibiría sin pagar Resend |
+| Storage | Cloudflare R2 | **`/public` local + URLs en seed** | Sin cuenta R2, imágenes commiteadas o linkeadas |
+| Cron jobs | Vercel Cron | **Eliminado** | Sin persistencia, no hay nada que ejecutar diferido |
+| Estado global | Zustand | **Zustand** (sin cambios) | Sigue igual, sincronizado con PGlite |
+
+**Lo que NO entra en Fase 2 (queda para Fase 3 si hay cliente real):**
+- Rate limiting real (sin auth real no aplica)
+- CSRF tokens, sanitización XSS profunda (demo no es superficie de ataque)
+- Backups, monitoring (no hay nada que respaldar/monitorear)
+- Verificación de email, recuperación de password
 
 ---
 
 ## Features Detalladas
 
-### F2.1 — Autenticación y Cuentas de Usuario
+### F2.1 — Demo Personas (en lugar de Auth real)
 
-**Flujos de auth:**
-- Registro con email + contraseña
-- Login con email + contraseña
-- Recuperación de contraseña por email
-- Verificación de email
+**Concepto:** en vez de un sistema de auth tradicional, el demo expone un **selector de personas**
+visible en el header. Cualquier visitante puede entrar como cliente, admin o staff con un click.
 
-**Perfil de usuario:**
-- Datos personales (nombre, email, teléfono, RUT)
-- Direcciones guardadas (para despacho futuro en Fase 3)
-- Mis mascotas: nombre, especie, raza, edad, peso
-  - Esto permite recomendaciones personalizadas ("Tu perro mediano de 3 años podría necesitar...")
-  - Es un diferenciador fuerte vs. e-commerce genérico
+**Personas pre-seedeadas:**
 
-**Consideraciones:**
-- RUT como identificador alternativo (para buscar cliente en tienda por RUT)
-- No exigir registro para navegar/agregar al carrito (solo para checkout en Fase 3)
-- Rate limiting en login para prevenir brute force
+| Persona | Email | Rol | Para qué sirve |
+|---------|-------|-----|----------------|
+| Camila Rojas | `camila@demo.cl` | `customer` | Cliente con historial: 3 mascotas, 2.500 puntos, 4 pedidos previos, 1 cita futura |
+| Admin Demo | `admin@demo.cl` | `admin` | Acceso completo al panel `/admin` |
+| Vendedor Sucursal Centro | `staff@demo.cl` | `staff` | Acceso a vista `/staff`, scopeado a una sucursal |
+
+**Implementación:**
+
+- Selector en el header tipo dropdown: "Entrar como…" → lista las 3 personas
+- Al elegir, se setea una cookie firmada (`SESSION_SECRET` en `.env`) con `{ userId, role }`
+- Middleware lee la cookie y popula `request.locals.user`
+- "Cerrar sesión" = borrar cookie y volver al estado anónimo
+- **NO hay registro tradicional**, pero existe un formulario "Crear cuenta demo" que crea un user
+  volátil en PGlite (se pierde en cold start, y la UI lo dice explícitamente)
+- RUT se mantiene en el modelo como identificador alternativo (parte del valor diferencial:
+  buscar cliente en tienda por RUT)
+
+**Persistencia de sesión:**
+- Cookie firmada HMAC-SHA256, expira en 7 días
+- Si el `userId` en la cookie no existe en PGlite (porque hubo cold start), se trata como anónimo
+- Esto es aceptable: el visitante simplemente vuelve a elegir persona
+
+**Modelo de datos:**
+
+```typescript
+interface User {
+  id: string;
+  email: string;
+  name: string;
+  rut?: string;
+  phone?: string;
+  role: 'customer' | 'admin' | 'staff';
+  storeId?: string;                  // Solo para role=staff (su sucursal)
+  isDemoSeed: boolean;               // true = persona seedeada, no se borra en reset
+  createdAt: Date;
+}
+```
 
 ---
 
 ### F2.2 — Panel de Administración
 
-**Acceso:** ruta `/admin` protegida con role-based auth (admin, staff)
+**Acceso:** ruta `/admin`, gated por middleware que chequea `role === 'admin'`.
 
-**Módulos del panel:**
+**Banner de demo (siempre visible en `/admin`):**
+> ⚠️ Demo · los cambios que hagas se reiniciarán periódicamente
+
+Esto es honesto con quien evalúa: ve que el panel ANDA, y entiende por qué su cambio "desapareció"
+si vuelve mañana.
+
+**Módulos del panel** (sin cambios vs. plan original):
 
 #### Gestión de Productos
-- CRUD completo de productos
-- Upload múltiple de imágenes con drag & drop
-- Editor de variantes (tamaños, pesos)
-- Asignación de categorías y tags
-- Gestión de stock por sucursal (tabla editable)
-- Precios y descuentos (precio normal, precio oferta, fecha de vigencia)
-- Productos relacionados (selección manual o automática por categoría)
-- Bulk actions: activar/desactivar, cambiar precio, ajustar stock
+- CRUD completo contra PGlite
+- Upload de imágenes: data URL inline guardada en la fila, o link a URL pública
+  (no R2, no upload real al filesystem en producción)
+- Variantes, categorías, tags, stock por sucursal
+- Precios y descuentos
+- Bulk actions
 
 #### Gestión de Categorías
-- CRUD de categorías y subcategorías
-- Orden de visualización (drag & drop)
-- Imagen por categoría
-- Asignación de especie
+- CRUD, orden drag & drop, imagen por categoría
 
 #### Gestión de Sucursales
-- CRUD de sucursales
-- Horarios por día
-- Servicios disponibles (checkboxes)
-- Coordenadas (picker en mapa)
+- CRUD, horarios, servicios, coordenadas
 
 #### Gestión de Usuarios/Clientes
 - Listado con búsqueda y filtros
-- Ver historial de puntos
-- Ajustar puntos manualmente
+- Ver historial de puntos, ajustar manualmente
 - Ver mascotas registradas
+- Las 3 personas seedeadas aparecen marcadas con un badge "demo" y no se pueden borrar
 
 ---
 
 ### F2.3 — Agendamiento de Servicios
 
-**Servicios agendables:**
-- Consulta veterinaria general
-- Vacunación
-- Desparasitación
-- Peluquería: baño, corte, deslanado, corte de uñas
-- Urgencias (solo muestra horario y teléfono, no se agenda online)
+**Sin cambios estructurales vs. plan original.** Todo el modelo, flujos cliente/admin y datos
+funcionan idéntico, solo viven en PGlite.
 
-**Flujo de agendamiento (cliente):**
-1. Seleccionar servicio
-2. Seleccionar sucursal (solo las que ofrecen ese servicio)
-3. Seleccionar mascota (de su perfil) o agregar una nueva
-4. Ver calendario con disponibilidad por día
-5. Seleccionar horario disponible (slots de 30 o 60 min según servicio)
-6. Confirmar datos y agendar
-7. Recibe email de confirmación con detalle y botón para cancelar/reagendar
+**Seed rico pre-cargado:**
+- 2-3 citas futuras del cliente demo Camila (para que su perfil se vea "vivo")
+- 5-10 citas históricas distribuidas en el pasado (atendidas, canceladas, no_show)
+- `ScheduleConfig` y `BlockedSlot` realistas por sucursal
 
-**Flujo de gestión (admin/staff):**
-- Vista de calendario semanal por sucursal
-- Ver citas del día con detalle de mascota y servicio
-- Marcar como atendida / no asistió / cancelada
-- Bloquear horarios (feriados, capacitación, etc.)
-- Configurar duración de slots por tipo de servicio
-- Configurar cantidad máxima de citas simultáneas
+**Notificaciones automáticas → Fake Inbox:**
+- Confirmación inmediata al agendar → aparece en `/demo/inbox`
+- Recordatorio 24h antes → en el demo, simulamos con un toggle "ver emails programados"
+- Recordatorio 2h antes → mismo mecanismo
 
-**Modelo de datos:**
-
-```typescript
-interface Service {
-  id: string;
-  name: string;                      // "Consulta veterinaria"
-  type: 'veterinaria' | 'peluqueria';
-  durationMinutes: number;           // 30, 60
-  price?: number;                    // null si es "consultar"
-  description: string;
-  availableAtStores: string[];       // IDs de sucursales
-}
-
-interface Appointment {
-  id: string;
-  serviceId: string;
-  storeId: string;
-  userId: string;
-  petId: string;
-  date: Date;
-  startTime: string;                 // "14:30"
-  endTime: string;                   // "15:00"
-  status: 'confirmed' | 'completed' | 'cancelled' | 'no_show';
-  notes?: string;
-  createdAt: Date;
-}
-
-interface ScheduleConfig {
-  storeId: string;
-  serviceType: 'veterinaria' | 'peluqueria';
-  dayOfWeek: number;                 // 0-6
-  startTime: string;                 // "10:00"
-  endTime: string;                   // "19:00"
-  slotDuration: number;              // minutos
-  maxConcurrent: number;             // citas simultáneas
-}
-
-interface BlockedSlot {
-  storeId: string;
-  date: Date;
-  startTime?: string;                // null = día completo
-  endTime?: string;
-  reason: string;
-}
-```
-
-**Notificaciones automáticas:**
-- Confirmación inmediata al agendar
-- Recordatorio 24h antes
-- Recordatorio 2h antes (opcional, por WhatsApp si se integra)
-- Email post-atención pidiendo valoración
+Modelo de datos sin cambios (`Service`, `Appointment`, `ScheduleConfig`, `BlockedSlot`).
 
 ---
 
 ### F2.4 — Sistema de Puntos / Fidelización
 
-**Reglas de acumulación:**
-- X puntos por cada $1.000 CLP gastado (configurable por admin)
-- Puntos bonus por primera compra
-- Puntos bonus en cumpleaños de la mascota
-- Puntos por completar perfil (agregar mascota, foto, etc.)
+**Sin cambios.** Modelo y reglas idénticas al plan original. Todo vive en PGlite.
 
-**Reglas de canje:**
-- Cada punto equivale a $X CLP de descuento (configurable)
-- Mínimo de puntos para canjear (ej: 500 puntos)
-- Se aplica como descuento en el checkout
-- No combinable con otros descuentos (configurable)
+**Seed rico:**
+- Camila arranca con 2.500 puntos y un historial de transacciones realistas (compras, bonus
+  primera compra, bonus cumpleaños de su perro, ajuste manual del admin)
+- Esto permite mostrar la pantalla "Mis Puntos" con datos creíbles desde el primer click
 
-**Vista del cliente:**
-- Balance actual de puntos en "Mi Cuenta"
-- Historial: fecha, concepto (compra #123, bonus cumpleaños), puntos +/-
-- Calculadora: "Tienes 2.500 puntos = $2.500 de descuento"
-
-**Vista admin/staff:**
-- Buscar cliente por RUT o email
-- Ver balance y historial
-- Agregar/descontar puntos manualmente (con motivo obligatorio)
-- Configurar reglas de acumulación y canje
-
-**Modelo de datos:**
-
-```typescript
-interface PointsTransaction {
-  id: string;
-  userId: string;
-  amount: number;                    // Positivo = acumula, negativo = canje
-  type: 'purchase' | 'redemption' | 'bonus' | 'manual_adjustment' | 'expiration';
-  reference?: string;                // ID de orden, motivo manual, etc.
-  description: string;               // "Compra #1234", "Bonus primera compra"
-  createdAt: Date;
-  createdBy?: string;                // userId del staff si es ajuste manual
-}
-
-interface PointsConfig {
-  pointsPerThousandCLP: number;      // Ej: 10 puntos por $1.000
-  pointValueCLP: number;             // Ej: 1 punto = $1
-  minimumRedemption: number;         // Ej: 500 puntos mínimo
-  firstPurchaseBonus: number;
-  petBirthdayBonus: number;
-  expirationDays?: number;           // null = no expiran
-}
-```
+Modelo de datos sin cambios (`PointsTransaction`, `PointsConfig`).
 
 ---
 
 ### F2.5 — Notificaciones de Restock
 
-**Flujo:**
-1. En ficha de producto sin stock, aparece botón "Notificarme cuando vuelva"
-2. Usuario ingresa email (o se usa el de su cuenta si está logueado)
-3. Selecciona sucursal(es) de interés (opcional)
-4. Cuando el admin actualiza stock > 0 para ese producto, se dispara email automático
-5. El email incluye link directo al producto y CTA "Comprar ahora"
+**Flujo (idéntico al plan, sin Resend):**
+1. En ficha de producto sin stock, botón "Notificarme cuando vuelva"
+2. Si está logueado, usa el email de la persona; si no, pide un email
+3. Selecciona sucursal(es) (opcional)
+4. Cuando el admin actualiza stock > 0, se dispara un "email" que va a `/demo/inbox`
+5. El cliente puede cancelar la alerta desde su perfil o desde el email (link funciona)
 
-**Consideraciones:**
-- Un usuario puede tener múltiples alertas activas
-- Se envía una sola vez por restock (no se re-envía si el stock vuelve a bajar y subir)
-- El usuario puede cancelar la alerta desde "Mi Cuenta" o desde el email
-- Rate limit: máximo 20 alertas activas por usuario
+**Diferencia con plan original:** el "envío" del email es escribir una fila en `demo_emails`,
+no llamar a Resend. La UX es la misma.
 
-**Modelo de datos:**
-
-```typescript
-interface RestockAlert {
-  id: string;
-  productId: string;
-  variantId?: string;
-  userId?: string;                   // null si es solo email
-  email: string;
-  storeIds?: string[];               // null = cualquier sucursal
-  status: 'active' | 'notified' | 'cancelled';
-  createdAt: Date;
-  notifiedAt?: Date;
-}
-```
+Modelo de datos sin cambios (`RestockAlert`), más una tabla `demo_emails` (ver F2.8).
 
 ---
 
 ### F2.6 — Blog / Contenido SEO
 
-**Tipos de contenido:**
-- Guías de cuidado por especie ("Cómo alimentar a tu cachorro", "Guía de arenas para gato")
-- Artículos estacionales ("Cómo proteger a tu perro del calor", "Kit de invierno para mascotas")
-- Novedades de productos y marcas
-- Tips de salud (vinculados a servicios veterinarios)
+**Sin cambios estructurales.** Todo el modelo y la UX funcionan idéntico.
 
-**Funcionalidad:**
-- Listado de artículos con filtro por categoría y especie
-- Artículo con contenido rico (texto, imágenes, videos embebidos)
-- Productos relacionados al final del artículo (ej: artículo sobre alimentación → link a alimentos)
-- Autor y fecha de publicación
-- Compartir en redes sociales
-- SEO: cada artículo genera una URL indexable con structured data (Article schema)
+**Seed:**
+- 8-12 artículos pre-escritos cubriendo las categorías (cuidados, alimentación, salud, novedades)
+- Cobertura de las 3 especies (perro, gato, exótico)
+- Productos relacionados ya linkeados al catálogo seedeado
 
-**Panel admin:**
-- Editor de contenido (Markdown o rich text con TipTap)
-- Programar publicación
-- Asignar categoría, especie, tags
-- Vincular productos relacionados
-
-**Modelo de datos:**
-
-```typescript
-interface BlogPost {
-  id: string;
-  slug: string;
-  title: string;
-  excerpt: string;
-  content: string;                   // Markdown o HTML
-  coverImage: string;
-  author: string;
-  category: string;                  // "cuidados", "alimentación", "salud", "novedades"
-  species: ('perro' | 'gato' | 'exotico')[];
-  tags: string[];
-  relatedProductIds: string[];
-  status: 'draft' | 'published' | 'scheduled';
-  publishedAt?: Date;
-  createdAt: Date;
-  updatedAt: Date;
-}
-```
+Modelo de datos sin cambios (`BlogPost`).
 
 ---
 
 ### F2.7 — Vista Staff (Componente en Tienda — Nivel Básico)
 
-**Acceso:** ruta `/staff` protegida con rol `staff` o `admin`
+**Acceso:** ruta `/staff`, gated por `role === 'staff' || role === 'admin'`.
 
-**Diseño:** optimizado para tablet (iPad) en mostrador. UI simplificada, botones grandes, sin navegación de tienda online.
+**Diseño:** optimizado para tablet, UI simplificada, botones grandes.
 
-**Funcionalidades:**
+**Selector de sucursal:** la persona `staff@demo.cl` está scopeada a "Sucursal Centro" en seed,
+pero el admin puede cambiar la sucursal activa desde un dropdown (para demostrar el feature).
 
-#### Consulta de Stock
-- Búsqueda rápida de producto (por nombre, SKU o escáner de código)
-- Ver stock en la sucursal actual y en las otras sucursales
-- Indicador visual claro: verde/amarillo/rojo
+**Funcionalidades sin cambios vs. plan original:**
+- Consulta de stock (búsqueda rápida, indicadores visuales)
+- Consulta de cliente (por RUT, nombre o email)
+- Citas del día (con marcar atendida / no asistió)
+- Pedidos para retiro (placeholder hasta Fase 3)
 
-#### Consulta de Cliente
-- Buscar por RUT, nombre o email
-- Ver balance de puntos actual
-- Ver historial reciente de compras y citas
-- Ver mascotas registradas
+---
 
-#### Citas del Día
-- Listado de citas agendadas para hoy en esta sucursal
-- Detalle: hora, servicio, cliente, mascota, notas
-- Marcar como atendida o no asistió
+### F2.8 — Fake Inbox (nuevo, reemplaza a Resend)
 
-#### Pedidos para Retiro
-- Lista de pedidos web marcados como "listo para retiro" en esta sucursal
-- Buscar por número de pedido o nombre del cliente
-- (En Fase 3 se agrega la funcionalidad de marcar como "entregado")
+**Ruta:** `/demo/inbox` — accesible para cualquier visitante.
+
+**Concepto:** una bandeja de entrada falsa que muestra todos los emails que el sistema HABRÍA
+enviado en una operación real. Es una herramienta pedagógica para el evaluador del demo.
+
+**Qué muestra:**
+- Lista cronológica de emails con: destinatario, asunto, fecha, tipo, body renderizado
+- Filtros por tipo de email (confirmación cita, restock, bienvenida, etc.) y por destinatario
+- Botón "Limpiar inbox" (resetea la tabla, útil para demos en vivo)
+
+**Modelo de datos:**
+
+```typescript
+interface DemoEmail {
+  id: string;
+  to: string;                        // Email destinatario
+  toUserId?: string;                 // Si el destinatario es un user conocido
+  subject: string;
+  type: 'appointment_confirmation' | 'appointment_reminder'
+      | 'restock_alert' | 'welcome' | 'points_adjustment' | 'other';
+  bodyHtml: string;                  // Render del template (usando templates simples in-repo)
+  bodyText: string;
+  createdAt: Date;
+  triggeredBy?: string;              // userId que provocó el email (admin que ajustó stock, etc.)
+}
+```
+
+**Helper centralizado:**
+
+```typescript
+// src/lib/demo-mail.ts
+export async function sendDemoEmail(args: {
+  to: string;
+  subject: string;
+  type: DemoEmail['type'];
+  template: (data: any) => { html: string; text: string };
+  data: any;
+}): Promise<void>;
+```
+
+Toda feature que "envía email" llama a este helper. El día que haya cliente real con Fase 3, se
+swappea la implementación interna por Resend sin tocar callers.
 
 ---
 
 ## Esquema de Base de Datos (Resumen)
 
 ```
-users
-  ├── pets (mis mascotas)
-  ├── points_transactions (historial de puntos)
+users (con isDemoSeed flag)
+  ├── pets
+  ├── points_transactions
   ├── restock_alerts
   └── addresses (para Fase 3)
 
@@ -341,39 +260,73 @@ products
   ├── stock_by_store
   └── restock_alerts
 
-categories
-  └── subcategories
+categories ── subcategories
 
 stores
   ├── schedule_config
   └── blocked_slots
 
-appointments
-  └── (linked to: user, pet, service, store)
-
+appointments (linked to: user, pet, service, store)
 services
 
 blog_posts
 
-admin_users (staff con roles)
+demo_emails (nueva — fake inbox)
 ```
 
 ---
 
-## Checklist de Entrega — Fase 2
+## Estrategia de Seed (crítica para Fase 2)
 
-- [ ] PostgreSQL configurado (Neon) con migraciones
-- [ ] Auth funcional (email/password + Google)
-- [ ] Panel admin: CRUD productos, categorías, sucursales
-- [ ] Panel admin: gestión de stock por sucursal
-- [ ] Panel admin: gestión de usuarios y puntos
-- [ ] Perfil de usuario con datos y mascotas
+El seed deja de ser solo "catálogo de productos" y pasa a ser **una narrativa completa**
+para que el demo se sienta vivo desde el primer click.
+
+**Capas del seed:**
+
+1. **Catálogo** (ya existe en slice-8): productos, categorías, marcas, sucursales, stock
+2. **Personas demo**: 3 usuarios con sus mascotas, direcciones, RUT
+3. **Historia de Camila** (cliente demo): 4 pedidos previos, 2.500 puntos con historial,
+   2 citas futuras + 5 históricas, 1 mascota con cumpleaños próximo
+4. **Blog**: 8-12 artículos con productos relacionados
+5. **Configuración**: horarios de sucursales, slots de servicios, reglas de puntos
+6. **Inbox**: 3-5 emails de ejemplo ya en la bandeja (para que `/demo/inbox` no aparezca vacío)
+
+Todo esto se ejecuta en `seed.ts` después del `migrate`. Tiempo objetivo: <2 segundos.
+
+---
+
+## Checklist de Entrega — Fase 2 (adaptada)
+
+- [x] PGlite configurado con migraciones (slice-9)
+- [x] Seed data básico (catálogo) en BD (slice-8b)
+- [x] Demo Personas: tabla `users`, seed de las 3 personas, selector en header, cookie firmada, middleware
+  - (middleware deferred — getCurrentUser helper covers RSC/server action needs for this slice; route gating will be in admin/staff layout slices)
+- [x] "Crear cuenta demo" volátil (registro que se pierde en cold start, con disclaimer)
+- [ ] Perfil de usuario: datos, mascotas (CRUD), historial de puntos, mis citas
+- [ ] Panel admin: CRUD productos, categorías, sucursales, stock por sucursal
+- [ ] Panel admin: gestión de usuarios y ajuste manual de puntos
+- [ ] Banner "demo" persistente en `/admin`
 - [ ] Sistema de agendamiento completo (cliente + admin)
-- [ ] Calendario de citas con slots y bloqueos
-- [ ] Emails transaccionales: confirmación cita, recordatorio, restock
-- [ ] Sistema de puntos: acumulación, canje, historial
-- [ ] Notificaciones de restock funcionales
-- [ ] Blog con editor, listado y artículos SEO-ready
+- [ ] Calendario de citas con slots, bloqueos y vista semanal
+- [ ] Sistema de puntos: acumulación automática (cuando exista checkout en Fase 3 esto se completa), canje, historial, ajustes manuales
+- [ ] Notificaciones de restock funcionales (escriben en `demo_emails`)
+- [ ] Blog: editor admin, listado público, artículos con productos relacionados
 - [ ] Vista `/staff` para consulta en tienda (stock, cliente, citas)
-- [x] Seed data migrado a BD — Drizzle schema + Neon DB activo; lib layer (`catalog`, `stores`, `stock`) lee desde DB; `src/data/` eliminado (slice-8b)
-- [ ] Tests para flujos críticos (auth, puntos, agendamiento)
+- [ ] Fake Inbox `/demo/inbox` con filtros, limpieza y templates de email
+- [ ] Helper `sendDemoEmail` swappeable
+- [ ] Seed rico: historia completa de Camila + blog + inbox
+- [ ] Tests Vitest para flujos críticos (sesión de persona, agendamiento, puntos, restock alert→email)
+
+---
+
+## Para más adelante (cuando aparezca cliente real con contrato)
+
+Estos ítems quedan listos para Fase 3 sin reescribir nada del trabajo de Fase 2, porque el código
+está diseñado con boundaries claros:
+
+- **Auth real**: reemplazar el módulo de Demo Personas por Better Auth (o Lucia, o lo que toque).
+  La cookie sigue siendo cookie, el middleware sigue leyéndola, el resto de la app no se entera.
+- **Persistencia real**: swappear PGlite por Neon/Supabase Postgres. Drizzle ya hace de buffer.
+- **Resend real**: reemplazar implementación de `sendDemoEmail` por la integración con Resend.
+  Los callers siguen igual.
+- **R2 para imágenes**: el campo `image_url` ya existe, solo cambia de dónde sale.
