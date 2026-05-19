@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { List, MagnifyingGlass, PawPrint } from "@phosphor-icons/react/dist/ssr";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   Sheet,
   SheetContent,
@@ -54,9 +55,13 @@ export async function SiteHeader() {
 
         <nav className="hidden md:flex items-center gap-1 ml-4">
           {siteConfig.nav.map((item) => (
-            <Button key={item.href} variant="ghost" size="sm" render={<Link href={item.href} />}>
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
+            >
               {item.label}
-            </Button>
+            </Link>
           ))}
         </nav>
 
