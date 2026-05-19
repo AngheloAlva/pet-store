@@ -13,6 +13,26 @@ import {
 import { relations } from "drizzle-orm";
 
 // ---------------------------------------------------------------------------
+// pets constants
+// ---------------------------------------------------------------------------
+export const SPECIES = ["dog", "cat", "exotic"] as const;
+export type Species = (typeof SPECIES)[number];
+
+// ---------------------------------------------------------------------------
+// points constants
+// ---------------------------------------------------------------------------
+export const POINTS_KIND = [
+  "purchase",
+  "first_purchase_bonus",
+  "pet_birthday_bonus",
+  "manual_adjustment",
+  "redemption",
+  "refund",
+  "expiration",
+] as const;
+export type PointsKind = (typeof POINTS_KIND)[number];
+
+// ---------------------------------------------------------------------------
 // users
 // ---------------------------------------------------------------------------
 export const USER_ROLES = {
@@ -261,8 +281,7 @@ export const appointments = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id),
-    // petId nullable until F2.4 adds pets table
-    petId: text("pet_id"),
+    petId: text("pet_id").references(() => pets.id, { onDelete: "set null" }),
     petNameSnapshot: text("pet_name_snapshot"),
     serviceId: text("service_id")
       .notNull()
@@ -283,6 +302,63 @@ export const appointments = pgTable(
     index("idx_appointments_user_starts_at").on(t.userId, t.startsAt),
   ],
 );
+
+// ---------------------------------------------------------------------------
+// pets
+// ---------------------------------------------------------------------------
+export const pets = pgTable("pets", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  species: text("species").notNull(),
+  breed: text("breed"),
+  birthDate: text("birth_date"),
+  weightKg: numeric("weight_kg", { precision: 5, scale: 2 }),
+  notes: text("notes"),
+  photoUrl: text("photo_url"),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ---------------------------------------------------------------------------
+// points_transactions
+// ---------------------------------------------------------------------------
+export const pointsTransactions = pgTable(
+  "points_transactions",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id),
+    deltaPoints: integer("delta_points").notNull(),
+    balanceAfter: integer("balance_after").notNull(),
+    kind: text("kind").notNull(),
+    referenceId: text("reference_id"),
+    description: text("description").notNull(),
+    createdBy: text("created_by").references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("idx_points_transactions_user_created_at").on(t.userId, t.createdAt),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// points_config (singleton — id always "singleton")
+// ---------------------------------------------------------------------------
+export const pointsConfig = pgTable("points_config", {
+  id: text("id").primaryKey(),
+  earnRatePerCLP: integer("earn_rate_per_clp").notNull().default(100),
+  redeemValuePerPoint: integer("redeem_value_per_point").notNull().default(1),
+  minRedeemPoints: integer("min_redeem_points").notNull().default(500),
+  firstPurchaseBonus: integer("first_purchase_bonus").notNull().default(500),
+  petBirthdayBonus: integer("pet_birthday_bonus").notNull().default(200),
+  expirationMonths: integer("expiration_months"),
+  active: boolean("active").notNull().default(true),
+});
 
 // ---------------------------------------------------------------------------
 // Relations
@@ -348,6 +424,25 @@ export const storesRelations = relations(stores, ({ many }) => ({
 export const usersRelations = relations(users, ({ one, many }) => ({
   store: one(stores, { fields: [users.storeId], references: [stores.id] }),
   appointments: many(appointments),
+  pets: many(pets),
+  pointsTransactions: many(pointsTransactions),
+}));
+
+export const petsRelations = relations(pets, ({ one }) => ({
+  user: one(users, { fields: [pets.userId], references: [users.id] }),
+}));
+
+export const pointsTransactionsRelations = relations(pointsTransactions, ({ one }) => ({
+  user: one(users, {
+    fields: [pointsTransactions.userId],
+    references: [users.id],
+    relationName: "points_user",
+  }),
+  createdByUser: one(users, {
+    fields: [pointsTransactions.createdBy],
+    references: [users.id],
+    relationName: "points_created_by",
+  }),
 }));
 
 export const stockLevelsRelations = relations(stockLevels, ({ one }) => ({
@@ -401,5 +496,9 @@ export const appointmentsRelations = relations(appointments, ({ one }) => ({
   store: one(stores, {
     fields: [appointments.storeId],
     references: [stores.id],
+  }),
+  pet: one(pets, {
+    fields: [appointments.petId],
+    references: [pets.id],
   }),
 }));

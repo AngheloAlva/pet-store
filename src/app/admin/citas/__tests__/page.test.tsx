@@ -17,7 +17,7 @@ const upcomingAppt = {
   userId: "user-camila-demo",
   userName: "Camila Rojas",
   petId: null,
-  petNameSnapshot: "Firulais",
+  petNameSnapshot: "Tobi",
   serviceId: "svc-1",
   serviceName: "Baño y corte",
   storeId: "providencia",

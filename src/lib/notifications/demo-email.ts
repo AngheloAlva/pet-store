@@ -12,6 +12,7 @@ export const DEMO_EMAIL_TEMPLATE = {
   APPOINTMENT_CANCELLATION: "appointment_cancellation",
   APPOINTMENT_REMINDER_24H: "appointment_reminder_24h",
   APPOINTMENT_REMINDER_2H: "appointment_reminder_2h",
+  POINTS_ADJUSTMENT: "points_adjustment",
 } as const;
 
 export type DemoEmailTemplate = (typeof DEMO_EMAIL_TEMPLATE)[keyof typeof DEMO_EMAIL_TEMPLATE];

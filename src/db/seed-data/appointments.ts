@@ -15,13 +15,14 @@ function makeAppt(
   startDate: Date,
   status: NewAppointment["status"],
   petNameSnapshot?: string,
+  petId?: string,
 ): NewAppointment {
   const startsAt = setHours(startDate, 10);
   const endsAt = new Date(startsAt.getTime() + 60 * 60 * 1000); // +1h
   return {
     id,
     userId,
-    petId: null,
+    petId: petId ?? null,
     petNameSnapshot: petNameSnapshot ?? null,
     serviceId,
     storeId,
@@ -42,7 +43,8 @@ export const seedAppointments: NewAppointment[] = [
     "providencia",
     addDays(DEMO_NOW, 3),
     APPOINTMENT_STATUS.SCHEDULED,
-    "Firulais",
+    "Tobi",
+    "pet-tobi-camila",
   ),
 
   // Camila — past attended (S-CUENTA-2)
@@ -53,7 +55,8 @@ export const seedAppointments: NewAppointment[] = [
     "las-condes",
     subDays(DEMO_NOW, 14),
     APPOINTMENT_STATUS.ATTENDED,
-    "Firulais",
+    "Tobi",
+    "pet-tobi-camila",
   ),
 
   // Admin — a couple of extra appointments for realistic data
@@ -92,7 +95,8 @@ export const seedAppointments: NewAppointment[] = [
     "providencia",
     addDays(DEMO_NOW, 10),
     APPOINTMENT_STATUS.SCHEDULED,
-    "Firulais",
+    "Tobi",
+    "pet-tobi-camila",
   ),
 
   makeAppt(

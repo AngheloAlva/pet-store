@@ -69,3 +69,21 @@ describe("enqueueAppointmentReminders", () => {
     await expect(enqueueAppointmentReminders("apt-123")).resolves.not.toThrow();
   });
 });
+
+describe("points_adjustment template", () => {
+  it("DEMO_EMAIL_TEMPLATE includes POINTS_ADJUSTMENT", async () => {
+    const { DEMO_EMAIL_TEMPLATE } = await import("./demo-email");
+    expect(DEMO_EMAIL_TEMPLATE.POINTS_ADJUSTMENT).toBe("points_adjustment");
+  });
+
+  it("sendDemoEmail resolves for points_adjustment template", async () => {
+    const { sendDemoEmail, DEMO_EMAIL_TEMPLATE } = await import("./demo-email");
+    await expect(
+      sendDemoEmail({
+        to: "user@example.com",
+        template: DEMO_EMAIL_TEMPLATE.POINTS_ADJUSTMENT,
+        data: { points: 200 },
+      }),
+    ).resolves.not.toThrow();
+  });
+});

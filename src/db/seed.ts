@@ -10,6 +10,8 @@ import { personas } from "./seed-data/personas";
 import { seedServices } from "./seed-data/services";
 import { seedScheduleConfigs, seedBlockedSlots } from "./seed-data/schedule-configs";
 import { seedAppointments } from "./seed-data/appointments";
+import { seedPets } from "./seed-data/pets";
+import { seedPointsConfig, seedPointsTransactions } from "./seed-data/points";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 type Db = PgliteDatabase<typeof schema>;
@@ -281,6 +283,23 @@ export async function applySeed(db: Db): Promise<void> {
       },
     });
 
+  // --- pets (must come BEFORE appointments due to FK) ---
+  await db
+    .insert(schema.pets)
+    .values(seedPets)
+    .onConflictDoUpdate({
+      target: schema.pets.id,
+      set: {
+        name: schema.pets.name,
+        species: schema.pets.species,
+        breed: schema.pets.breed,
+        birthDate: schema.pets.birthDate,
+        weightKg: schema.pets.weightKg,
+        active: schema.pets.active,
+        updatedAt: schema.pets.updatedAt,
+      },
+    });
+
   // --- appointments ---
   await db
     .insert(schema.appointments)
@@ -291,6 +310,37 @@ export async function applySeed(db: Db): Promise<void> {
         status: schema.appointments.status,
         notes: schema.appointments.notes,
         cancelReason: schema.appointments.cancelReason,
+        petId: schema.appointments.petId,
+        petNameSnapshot: schema.appointments.petNameSnapshot,
+      },
+    });
+
+  // --- points_config singleton ---
+  await db
+    .insert(schema.pointsConfig)
+    .values(seedPointsConfig)
+    .onConflictDoUpdate({
+      target: schema.pointsConfig.id,
+      set: {
+        earnRatePerCLP: schema.pointsConfig.earnRatePerCLP,
+        redeemValuePerPoint: schema.pointsConfig.redeemValuePerPoint,
+        minRedeemPoints: schema.pointsConfig.minRedeemPoints,
+        firstPurchaseBonus: schema.pointsConfig.firstPurchaseBonus,
+        petBirthdayBonus: schema.pointsConfig.petBirthdayBonus,
+        active: schema.pointsConfig.active,
+      },
+    });
+
+  // --- points_transactions (Camila's 9 txs) ---
+  await db
+    .insert(schema.pointsTransactions)
+    .values(seedPointsTransactions)
+    .onConflictDoUpdate({
+      target: schema.pointsTransactions.id,
+      set: {
+        deltaPoints: schema.pointsTransactions.deltaPoints,
+        balanceAfter: schema.pointsTransactions.balanceAfter,
+        description: schema.pointsTransactions.description,
       },
     });
 }

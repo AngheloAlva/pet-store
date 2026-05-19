@@ -50,3 +50,80 @@ describe("applySeed — personas", () => {
     expect(staff?.storeId).toBe("providencia");
   });
 });
+
+// ---------------------------------------------------------------------------
+// S-SEED-1: F2.4 Pets + Points seed determinism
+// ---------------------------------------------------------------------------
+describe("applySeed — pets + points (S-SEED-1)", () => {
+  let db: Awaited<ReturnType<typeof createTestDb>>;
+
+  beforeEach(async () => {
+    db = await createTestDb();
+    await applySeed(db);
+  });
+
+  it("Camila's points balance equals exactly 2500 after seed", async () => {
+    const { pointsTransactions } = await import("./schema");
+    const { desc, eq } = await import("drizzle-orm");
+    const rows = await db
+      .select({ balanceAfter: pointsTransactions.balanceAfter })
+      .from(pointsTransactions)
+      .where(eq(pointsTransactions.userId, "user-camila-demo"))
+      .orderBy(desc(pointsTransactions.createdAt))
+      .limit(1);
+    expect(rows[0]?.balanceAfter).toBe(2500);
+  });
+
+  it("Tobi pet exists for Camila", async () => {
+    const { pets } = await import("./schema");
+    const { eq } = await import("drizzle-orm");
+    const rows = await db
+      .select()
+      .from(pets)
+      .where(eq(pets.userId, "user-camila-demo"));
+    expect(rows).toHaveLength(1);
+    expect(rows[0].name).toBe("Tobi");
+    expect(rows[0].id).toBe("pet-tobi-camila");
+  });
+
+  it("no appointment has petNameSnapshot = 'Firulais'", async () => {
+    const { appointments } = await import("./schema");
+    const { eq } = await import("drizzle-orm");
+    const rows = await db
+      .select({ snapshot: appointments.petNameSnapshot })
+      .from(appointments)
+      .where(eq(appointments.petNameSnapshot, "Firulais"));
+    expect(rows).toHaveLength(0);
+  });
+
+  it("Camila's appointments reference Tobi", async () => {
+    const { appointments } = await import("./schema");
+    const { eq, and } = await import("drizzle-orm");
+    const rows = await db
+      .select({ petId: appointments.petId, snapshot: appointments.petNameSnapshot })
+      .from(appointments)
+      .where(
+        and(
+          eq(appointments.userId, "user-camila-demo"),
+          eq(appointments.petNameSnapshot, "Tobi"),
+        ),
+      );
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      expect(row.petId).toBe("pet-tobi-camila");
+    }
+  });
+
+  it("points_config singleton exists with correct defaults", async () => {
+    const { pointsConfig } = await import("./schema");
+    const { eq } = await import("drizzle-orm");
+    const [config] = await db
+      .select()
+      .from(pointsConfig)
+      .where(eq(pointsConfig.id, "singleton"));
+    expect(config).toBeDefined();
+    expect(config.earnRatePerCLP).toBe(100);
+    expect(config.firstPurchaseBonus).toBe(500);
+    expect(config.petBirthdayBonus).toBe(200);
+  });
+});

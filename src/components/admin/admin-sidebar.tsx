@@ -8,6 +8,8 @@ import {
   Scissors,
   Clock,
   CalendarCheck,
+  PawPrint,
+  Star,
 } from "@phosphor-icons/react/dist/ssr";
 
 const NAV_ITEMS = [
@@ -18,6 +20,8 @@ const NAV_ITEMS = [
   { label: "Sucursales", href: "/admin/sucursales", icon: Storefront, disabled: false },
   { label: "Horarios", href: "/admin/horarios", icon: Clock, disabled: false },
   { label: "Citas", href: "/admin/citas", icon: CalendarCheck, disabled: false },
+  { label: "Mascotas", href: "/admin/mascotas", icon: PawPrint, disabled: false },
+  { label: "Puntos", href: "/admin/puntos", icon: Star, disabled: false },
   { label: "Usuarios", href: "/admin/usuarios", icon: Users, disabled: false },
 ] as const;
 

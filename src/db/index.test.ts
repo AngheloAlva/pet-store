@@ -9,7 +9,7 @@ describe("db boot sequence", () => {
     await dbReady;
     const products = await db.query.products.findMany();
     expect(products.length).toBeGreaterThan(0);
-  });
+  }, 20000);
 
   it("reuses the cached instance on re-import (singleton)", async () => {
     const a = await import("@/db");

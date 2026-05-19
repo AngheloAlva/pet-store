@@ -169,11 +169,11 @@ describe("createAppointment", () => {
       serviceId: "svc-1",
       storeId: "providencia",
       startsAt: FUTURE,
-      petNameSnapshot: "Firulais",
+      petNameSnapshot: "Tobi",
     });
     expect(insertedValues).not.toBeNull();
     expect(insertedValues!.petId).toBeNull();
-    expect(insertedValues!.petNameSnapshot).toBe("Firulais");
+    expect(insertedValues!.petNameSnapshot).toBe("Tobi");
   });
 
   it("S-PUBLIC-3: serial race — second call returns slot_unavailable after first succeeds", async () => {
