@@ -13,6 +13,7 @@ import { productFormSchema, type ZodFlatError } from "@/app/actions/admin/produc
 import type { ProductForEdit } from "@/lib/admin/products";
 import type { Brand, Category, Store } from "@/types";
 import { Trash } from "@phosphor-icons/react";
+import { slugify } from "@/lib/admin/slugify";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -57,21 +58,6 @@ type Props = {
     input: unknown,
   ) => Promise<{ ok: true; id?: string } | { ok: false; errors: ZodFlatError }>;
 };
-
-// ---------------------------------------------------------------------------
-// Slug helper
-// ---------------------------------------------------------------------------
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z0-9\s-]/g, "")
-    .trim()
-    .replace(/[\s]+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
-}
 
 // ---------------------------------------------------------------------------
 // Empty variant helper

@@ -51,11 +51,38 @@ describe("AdminSidebar — Productos link (S22/R17)", () => {
     expect(productosLink?.className).not.toContain("cursor-not-allowed");
   });
 
-  it("still renders exactly 3 placeholder links with href=#", () => {
+  it("no placeholder links — all 3 new routes are live (S28)", () => {
     render(<AdminSidebar />);
     const placeholderLinks = screen
       .getAllByRole("link")
       .filter((el) => el.getAttribute("href") === "#");
-    expect(placeholderLinks).toHaveLength(3);
+    expect(placeholderLinks).toHaveLength(0);
+  });
+
+  it("Categorías link has href='/admin/categorias' (S28)", () => {
+    render(<AdminSidebar />);
+    const link = screen
+      .getAllByRole("link")
+      .find((el) => el.textContent?.includes("Categorías"));
+    expect(link).toHaveAttribute("href", "/admin/categorias");
+    expect(link).not.toHaveAttribute("aria-disabled");
+  });
+
+  it("Sucursales link has href='/admin/sucursales' (S28)", () => {
+    render(<AdminSidebar />);
+    const link = screen
+      .getAllByRole("link")
+      .find((el) => el.textContent?.includes("Sucursales"));
+    expect(link).toHaveAttribute("href", "/admin/sucursales");
+    expect(link).not.toHaveAttribute("aria-disabled");
+  });
+
+  it("Usuarios link has href='/admin/usuarios' (S28)", () => {
+    render(<AdminSidebar />);
+    const link = screen
+      .getAllByRole("link")
+      .find((el) => el.textContent?.includes("Usuarios"));
+    expect(link).toHaveAttribute("href", "/admin/usuarios");
+    expect(link).not.toHaveAttribute("aria-disabled");
   });
 });

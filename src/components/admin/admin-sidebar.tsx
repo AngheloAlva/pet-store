@@ -10,9 +10,9 @@ import {
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/admin", icon: SquaresFour, disabled: false },
   { label: "Productos", href: "/admin/productos", icon: Package, disabled: false },
-  { label: "Categorías", href: "#", icon: Tag, disabled: true },
-  { label: "Sucursales", href: "#", icon: Storefront, disabled: true },
-  { label: "Usuarios", href: "#", icon: Users, disabled: true },
+  { label: "Categorías", href: "/admin/categorias", icon: Tag, disabled: false },
+  { label: "Sucursales", href: "/admin/sucursales", icon: Storefront, disabled: false },
+  { label: "Usuarios", href: "/admin/usuarios", icon: Users, disabled: false },
 ] as const;
 
 export function AdminSidebar() {

@@ -98,14 +98,14 @@ describe("AdminLayout — render", () => {
     expect(banner.querySelector("a")).toBeNull();
   });
 
-  it("AdminSidebar renders exactly 3 placeholder links with href=# (Productos is now /admin/productos)", async () => {
+  it("AdminSidebar renders no placeholder links (all routes are live)", async () => {
     mockGetCurrentUser.mockResolvedValue(adminUser);
     const jsx = await AdminLayout({ children: <div /> });
     render(jsx);
     const placeholderLinks = screen
       .getAllByRole("link")
       .filter((el) => el.getAttribute("href") === "#");
-    expect(placeholderLinks).toHaveLength(3);
+    expect(placeholderLinks).toHaveLength(0);
   });
 });
 
