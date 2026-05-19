@@ -80,4 +80,56 @@ describe("PersonaSelector", () => {
 
     expect(clearMock).toHaveBeenCalledTimes(1);
   });
+
+  const mockAdminUser = { ...mockUser, role: "admin" as const };
+  const mockStaffUser = { ...mockUser, role: "staff" as const };
+
+  it("admin role: dropdown shows 'Panel admin' link to /admin", async () => {
+    const user = userEvent.setup();
+    render(<PersonaSelector currentUser={mockAdminUser} />);
+
+    await user.click(screen.getByRole("button", { name: /menú de usuario/i }));
+
+    const adminLink = await screen.findByRole("menuitem", {
+      name: /panel admin/i,
+    });
+    expect(adminLink).toBeInTheDocument();
+    expect(adminLink).toHaveAttribute("href", "/admin");
+  });
+
+  it("customer role: dropdown does NOT show 'Panel admin'", async () => {
+    const user = userEvent.setup();
+    render(<PersonaSelector currentUser={mockUser} />);
+
+    await user.click(screen.getByRole("button", { name: /menú de usuario/i }));
+    await screen.findByText("Cerrar sesión");
+
+    expect(
+      screen.queryByRole("menuitem", { name: /panel admin/i }),
+    ).toBeNull();
+  });
+
+  it("staff role: dropdown does NOT show 'Panel admin'", async () => {
+    const user = userEvent.setup();
+    render(<PersonaSelector currentUser={mockStaffUser} />);
+
+    await user.click(screen.getByRole("button", { name: /menú de usuario/i }));
+    await screen.findByText("Cerrar sesión");
+
+    expect(
+      screen.queryByRole("menuitem", { name: /panel admin/i }),
+    ).toBeNull();
+  });
+
+  it("anonymous (null): no 'Panel admin' in dropdown", async () => {
+    const user = userEvent.setup();
+    render(<PersonaSelector currentUser={null} />);
+
+    await user.click(screen.getByRole("button", { name: /cambiar persona/i }));
+    await screen.findByText("Camila Rojas");
+
+    expect(
+      screen.queryByRole("menuitem", { name: /panel admin/i }),
+    ).toBeNull();
+  });
 });

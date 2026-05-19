@@ -1,0 +1,50 @@
+import Link from "next/link";
+import {
+  SquaresFour,
+  Package,
+  Tag,
+  Storefront,
+  Users,
+} from "@phosphor-icons/react/dist/ssr";
+
+const NAV_ITEMS = [
+  { label: "Dashboard", href: "/admin", icon: SquaresFour, disabled: false },
+  { label: "Productos", href: "#", icon: Package, disabled: true },
+  { label: "Categorías", href: "#", icon: Tag, disabled: true },
+  { label: "Sucursales", href: "#", icon: Storefront, disabled: true },
+  { label: "Usuarios", href: "#", icon: Users, disabled: true },
+] as const;
+
+export function AdminSidebar() {
+  return (
+    <nav className="flex md:flex-col gap-1 overflow-x-auto md:overflow-visible p-2 md:p-4 border-b md:border-b-0 md:w-56 md:border-r md:border-border md:min-h-[calc(100vh-4rem)]">
+      {NAV_ITEMS.map((item) => {
+        const Icon = item.icon;
+        if (item.disabled) {
+          return (
+            <Link
+              key={item.label}
+              href={item.href}
+              aria-disabled="true"
+              tabIndex={-1}
+              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm opacity-50 cursor-not-allowed pointer-events-none"
+            >
+              <Icon size={16} />
+              {item.label}
+            </Link>
+          );
+        }
+        return (
+          <Link
+            key={item.label}
+            href={item.href}
+            className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
+          >
+            <Icon size={16} />
+            {item.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
