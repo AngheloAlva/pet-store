@@ -1,10 +1,7 @@
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
-const TEST_SECRET = "test-secret-32-chars-min-padded-12345678901234567890";
-
-// Must run before module initialization — vi.stubEnv is hoisted by Vitest
-// when called at the module's top level before any imports that use the env var.
-// We use vi.hoisted to guarantee execution before the session module loads.
+// Must run before module initialization — vi.hoisted guarantees execution
+// before the session module loads and hits the fail-fast SESSION_SECRET guard.
 const { stubEnvSetup } = vi.hoisted(() => {
   process.env.SESSION_SECRET = "test-secret-32-chars-min-padded-12345678901234567890";
   return { stubEnvSetup: true };
