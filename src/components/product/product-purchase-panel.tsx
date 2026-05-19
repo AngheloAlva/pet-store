@@ -10,12 +10,15 @@ import { MobileStickyCta } from "./mobile-sticky-cta";
 import { ProductPrice } from "./product-price";
 import { ProductStockList } from "./product-stock-list";
 import { QuantityStepper } from "./quantity-stepper";
+import { RestockAlertForm } from "./restock-alert-form";
 
 type Props = {
   product: Product;
+  isAuthenticated?: boolean;
+  userEmail?: string;
 };
 
-export function ProductPurchasePanel({ product }: Props) {
+export function ProductPurchasePanel({ product, isAuthenticated = false, userEmail }: Props) {
   const [selectedVariantId, setSelectedVariantId] = useState(
     product.variants[0].id,
   );
@@ -76,6 +79,14 @@ export function ProductPurchasePanel({ product }: Props) {
             isOutOfStock={!available}
             variantLabel={selectedVariant.name}
           />
+          {!available && (
+            <RestockAlertForm
+              productId={product.id}
+              variantId={selectedVariantId}
+              isAuthenticated={isAuthenticated}
+              userEmail={userEmail}
+            />
+          )}
         </div>
       </div>
 

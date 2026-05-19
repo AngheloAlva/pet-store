@@ -361,6 +361,43 @@ export const pointsConfig = pgTable("points_config", {
 });
 
 // ---------------------------------------------------------------------------
+// restock_alerts
+// ---------------------------------------------------------------------------
+export const RESTOCK_ALERT_STATUS = ["pending", "fired", "canceled"] as const;
+export type RestockAlertStatus = (typeof RESTOCK_ALERT_STATUS)[number];
+
+export const restockAlerts = pgTable(
+  "restock_alerts",
+  {
+    id: text("id").primaryKey(),
+    email: text("email").notNull(),
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+    productId: text("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+    variantId: text("variant_id").references(() => productVariants.id, {
+      onDelete: "cascade",
+    }),
+    storeIds: text("store_ids").array(),
+    status: text("status")
+      .$type<RestockAlertStatus>()
+      .notNull()
+      .default("pending"),
+    cancelToken: text("cancel_token").notNull().unique(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    firedAt: timestamp("fired_at", { withTimezone: true }),
+    canceledAt: timestamp("canceled_at", { withTimezone: true }),
+  },
+  (t) => [
+    index("idx_restock_product_status").on(t.productId, t.status),
+    index("idx_restock_variant_status").on(t.variantId, t.status),
+    index("idx_restock_user").on(t.userId),
+  ],
+);
+
+// ---------------------------------------------------------------------------
 // demo_emails
 // ---------------------------------------------------------------------------
 export const DEMO_EMAIL_TYPE = [
@@ -551,5 +588,20 @@ export const demoEmailsRelations = relations(demoEmails, ({ one }) => ({
     fields: [demoEmails.triggeredBy],
     references: [users.id],
     relationName: "demo_emails_triggered_by",
+  }),
+}));
+
+export const restockAlertsRelations = relations(restockAlerts, ({ one }) => ({
+  user: one(users, {
+    fields: [restockAlerts.userId],
+    references: [users.id],
+  }),
+  product: one(products, {
+    fields: [restockAlerts.productId],
+    references: [products.id],
+  }),
+  variant: one(productVariants, {
+    fields: [restockAlerts.variantId],
+    references: [productVariants.id],
   }),
 }));

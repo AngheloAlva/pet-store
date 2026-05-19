@@ -34,4 +34,21 @@ describe("restock-alert template", () => {
     expect(typeof result.html).toBe("string");
     expect(typeof result.text).toBe("string");
   });
+
+  // cancelUrl cases
+  it("html contains cancel link when cancelUrl is provided", () => {
+    const { html } = render({ ...data, cancelUrl: "https://example.com/alertas/cancelar?token=abc" });
+    expect(html).toContain("https://example.com/alertas/cancelar?token=abc");
+    expect(html).toContain("<a ");
+  });
+
+  it("text contains cancel link when cancelUrl is provided", () => {
+    const { text } = render({ ...data, cancelUrl: "https://example.com/alertas/cancelar?token=abc" });
+    expect(text).toContain("https://example.com/alertas/cancelar?token=abc");
+  });
+
+  it("html does NOT contain anchor when cancelUrl is absent", () => {
+    const { html } = render(data);
+    expect(html).not.toContain("<a ");
+  });
 });

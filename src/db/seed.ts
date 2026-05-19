@@ -13,6 +13,7 @@ import { seedAppointments } from "./seed-data/appointments";
 import { seedPets } from "./seed-data/pets";
 import { seedPointsConfig, seedPointsTransactions } from "./seed-data/points";
 import { seedDemoEmails } from "./seed-data/demo-emails";
+import { seedRestockAlerts } from "./seed-data/restock-alerts";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 type Db = PgliteDatabase<typeof schema>;
@@ -355,6 +356,19 @@ export async function applySeed(db: Db): Promise<void> {
         subject: schema.demoEmails.subject,
         bodyHtml: schema.demoEmails.bodyHtml,
         bodyText: schema.demoEmails.bodyText,
+      },
+    });
+
+  // --- restock_alerts (4 rows: Camila pending/fired/canceled + 1 anonymous pending) ---
+  await db
+    .insert(schema.restockAlerts)
+    .values(seedRestockAlerts)
+    .onConflictDoUpdate({
+      target: schema.restockAlerts.id,
+      set: {
+        status: schema.restockAlerts.status,
+        firedAt: schema.restockAlerts.firedAt,
+        canceledAt: schema.restockAlerts.canceledAt,
       },
     });
 }

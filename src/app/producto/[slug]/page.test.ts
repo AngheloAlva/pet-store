@@ -8,6 +8,12 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 
+// Mock restock-alerts action to prevent session.ts from loading (requires SESSION_SECRET env)
+vi.mock("@/app/actions/restock-alerts", () => ({
+  createRestockAlert: vi.fn(async () => ({ ok: true, alertId: "mock-alert", cancelToken: "mock-tok" })),
+  cancelRestockAlert: vi.fn(async () => ({ ok: true })),
+}));
+
 // Mock the lib/catalog async helpers so tests run without a live DB.
 vi.mock("@/lib/catalog", async (importOriginal) => {
   const original = await importOriginal<typeof import("@/lib/catalog")>();

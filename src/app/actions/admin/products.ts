@@ -12,6 +12,9 @@ import {
   stockLevels,
 } from "@/db/schema";
 import { eq, inArray } from "drizzle-orm";
+import { dispatchRestockAlerts } from "@/lib/restock/dispatch";
+import type { RestockEvent } from "@/lib/restock/dispatch";
+import { getCachedStores } from "@/db/sync-cache";
 import {
   createProductSchema,
   updateProductSchema,
@@ -131,10 +134,13 @@ export async function updateProduct(
 
   const data = parsed.data;
 
+  // Accumulate restock events across all variants (populated inside transaction)
+  const restockEvents: RestockEvent[] = [];
+
   const result = await db.transaction(async (tx) => {
     // Check product exists
     const existing = await tx
-      .select({ id: products.id })
+      .select({ id: products.id, name: products.name })
       .from(products)
       .where(eq(products.id, id));
 
@@ -147,6 +153,8 @@ export async function updateProduct(
         } as ZodFlatError,
       };
     }
+
+    const productName = existing[0].name;
 
     // Update product row
     await tx
@@ -205,6 +213,10 @@ export async function updateProduct(
       await tx.delete(productVariants).where(inArray(productVariants.id, toDelete));
     }
 
+    // Resolve store names once (sync cache is pre-populated at boot)
+    const cachedStores = getCachedStores();
+    const storeNameMap = new Map(cachedStores.map((s) => [s.id, s.name]));
+
     // Update kept variants, insert new ones
     for (const variant of data.variants) {
       if (variant.id && existingVariantIds.has(variant.id)) {
@@ -224,6 +236,19 @@ export async function updateProduct(
           })
           .where(eq(productVariants.id, variant.id));
 
+        // ---------------------------------------------------------------
+        // LOAD-BEARING: Capture previous stock status BEFORE deleting rows.
+        // We must SELECT here, inside the transaction, so we read the
+        // committed values before the delete wipes them. After delete+reinsert
+        // we diff prev vs new to detect out_of_stock → !out_of_stock transitions.
+        // ---------------------------------------------------------------
+        const prevStockRows = await tx
+          .select({ storeId: stockLevels.storeId, status: stockLevels.status })
+          .from(stockLevels)
+          .where(eq(stockLevels.variantId, variant.id));
+
+        const prevByStore = new Map(prevStockRows.map((r) => [r.storeId, r.status]));
+
         // Delete and reinsert stock levels for this variant
         await tx.delete(stockLevels).where(eq(stockLevels.variantId, variant.id));
         for (const [storeId, status] of Object.entries(variant.stockByStore)) {
@@ -232,6 +257,20 @@ export async function updateProduct(
             storeId,
             status,
           });
+        }
+
+        // Diff: collect out_of_stock → !out_of_stock transitions
+        for (const [storeId, newStatus] of Object.entries(variant.stockByStore)) {
+          const prevStatus = prevByStore.get(storeId);
+          if (prevStatus === "out_of_stock" && newStatus !== "out_of_stock") {
+            restockEvents.push({
+              variantId: variant.id,
+              storeId,
+              storeName: storeNameMap.get(storeId) ?? storeId,
+              productName,
+              variantName: variant.name,
+            });
+          }
         }
       } else {
         // Insert new variant
@@ -269,6 +308,14 @@ export async function updateProduct(
 
   revalidatePath("/admin/productos");
   revalidatePath(`/admin/productos/${id}/editar`, "page");
+
+  // Post-transaction: fire restock alerts for out_of_stock → !out_of_stock transitions.
+  // Best-effort: a dispatch failure must NOT fail the admin action.
+  if (restockEvents.length > 0) {
+    await dispatchRestockAlerts({ productId: id, events: restockEvents }).catch((err) =>
+      console.error("[restock] dispatch failed", err),
+    );
+  }
 
   return { ok: true };
 }

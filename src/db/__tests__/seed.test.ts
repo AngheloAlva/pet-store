@@ -50,12 +50,14 @@ describe("seed determinism", () => {
     const { seedScheduleConfigs, seedBlockedSlots } = await import("@/db/seed-data/schedule-configs");
     const { seedAppointments } = await import("@/db/seed-data/appointments");
     const { seedDemoEmails } = await import("@/db/seed-data/demo-emails");
+    const { seedRestockAlerts } = await import("@/db/seed-data/restock-alerts");
 
     expect(seedServices.length).toBeGreaterThanOrEqual(3);
     expect(seedScheduleConfigs.length).toBeGreaterThan(0);
     expect(seedBlockedSlots.length).toBeGreaterThan(0);
     expect(seedAppointments.length).toBeGreaterThanOrEqual(8);
     expect(seedDemoEmails.length).toBe(5);
+    expect(seedRestockAlerts.length).toBe(4);
   });
 
   it("S-SEED-1: demo emails seed has 5 rows with expected types for Camila", async () => {
@@ -68,6 +70,30 @@ describe("seed determinism", () => {
     expect(types).toContain("appointment_canceled");
     // All rows for Camila
     expect(seedDemoEmails.every((e) => e.toEmail === "camila@demo.cl")).toBe(true);
+  });
+
+  it("S-SEED-1: restock_alerts has expected status distribution", async () => {
+    const { seedRestockAlerts } = await import("@/db/seed-data/restock-alerts");
+
+    const statuses = seedRestockAlerts.map((a) => a.status);
+    // At least 1 pending row with Camila's userId
+    const pendingCamila = seedRestockAlerts.filter(
+      (a) => a.status === "pending" && a.userId === "user-camila-demo",
+    );
+    expect(pendingCamila.length).toBeGreaterThanOrEqual(1);
+
+    // At least 1 canceled row
+    expect(statuses).toContain("canceled");
+
+    // At least 1 pending row with userId=null (anonymous)
+    const pendingAnon = seedRestockAlerts.filter(
+      (a) => a.status === "pending" && a.userId === null,
+    );
+    expect(pendingAnon.length).toBeGreaterThanOrEqual(1);
+
+    // All IDs are deterministic (not random UUIDs) — fixed strings
+    const allDeterministic = seedRestockAlerts.every((a) => a.id.startsWith("restock-alert-"));
+    expect(allDeterministic).toBe(true);
   });
 
   it("seed data has fixed IDs (deterministic)", async () => {

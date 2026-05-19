@@ -11,6 +11,10 @@ import {
   products,
 } from "@/db/schema";
 
+vi.mock("@/lib/restock/dispatch", () => ({
+  dispatchRestockAlerts: vi.fn(async () => ({ fired: 0, skipped: 0 })),
+}));
+
 // ---------------------------------------------------------------------------
 // Mocks
 // ---------------------------------------------------------------------------
@@ -296,5 +300,151 @@ describe("bulkToggleFeatured", () => {
     expect(updateMock).toHaveBeenCalledTimes(1);
     expect(updateSetMock).toHaveBeenCalledWith({ featured: true });
     expect(mockRevalidatePath).toHaveBeenCalledWith("/admin/productos");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// updateProduct — restock dispatch integration
+// ---------------------------------------------------------------------------
+describe("updateProduct — restock dispatch", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("S-UPDATEPRODUCT-1: prev out_of_stock → in_stock calls dispatchRestockAlerts", async () => {
+    const { dispatchRestockAlerts } = await import("@/lib/restock/dispatch");
+    const mockDispatch = vi.mocked(dispatchRestockAlerts);
+
+    mockGetCurrentUser.mockResolvedValue(adminUser);
+
+    const variantId = "variant-123";
+    const productId = "product-abc";
+
+    // The transaction mock must simulate:
+    // 1. select existing product → found
+    // 2. select existing variants → [{ id: variantId }]
+    // 3. select prevStockRows (before delete) → [{ storeId: "store-1", status: "out_of_stock" }]
+    // 4. all updates/deletes/inserts succeed
+
+    (db as AnyDb).transaction = vi.fn(async (cb: (tx: AnyDb) => Promise<unknown>) => {
+      let selectCallCount = 0;
+      const txStub: AnyDb = {
+        select: vi.fn(() => {
+          selectCallCount++;
+          if (selectCallCount === 1) {
+            // Check product exists
+            return { from: vi.fn(() => ({ where: vi.fn(async () => [{ id: productId }]) })) };
+          }
+          if (selectCallCount === 2) {
+            // Get existing variants
+            return { from: vi.fn(() => ({ where: vi.fn(async () => [{ id: variantId }]) })) };
+          }
+          // prevStockRows — out_of_stock before delete
+          return { from: vi.fn(() => ({ where: vi.fn(async () => [{ storeId: "store-1", status: "out_of_stock" }]) })) };
+        }),
+        update: vi.fn(() => ({ set: vi.fn(() => ({ where: vi.fn(async () => ({})) })) })),
+        delete: vi.fn(() => ({ where: vi.fn(async () => ({})) })),
+        insert: vi.fn(() => ({ values: vi.fn(async () => ({})) })),
+      };
+      return cb(txStub);
+    });
+
+    const payload = {
+      name: "Test Product",
+      slug: "test-product",
+      brandId: "brand-1",
+      description: "A test product description",
+      species: ["dog"] as const,
+      tags: [],
+      featured: false,
+      categoryIds: ["cat-1"],
+      images: [{ url: "https://example.com/img.jpg", alt: "Test" }],
+      variants: [
+        {
+          id: variantId,
+          sku: "TEST-001",
+          name: "Test Variant",
+          quantityValue: 1,
+          quantityUnit: "kg" as const,
+          priceAmount: 9990,
+          compareAtAmount: null,
+          barcode: null,
+          stockByStore: { "store-1": "in_stock" as const },
+        },
+      ],
+    };
+
+    const { updateProduct } = await getActions();
+    await updateProduct(productId, payload);
+
+    expect(mockDispatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        productId,
+        events: expect.arrayContaining([
+          expect.objectContaining({ storeId: "store-1" }),
+        ]),
+      }),
+    );
+  });
+
+  it("S-UPDATEPRODUCT-2: prev in_stock → low_stock does NOT call dispatchRestockAlerts", async () => {
+    const { dispatchRestockAlerts } = await import("@/lib/restock/dispatch");
+    const mockDispatch = vi.mocked(dispatchRestockAlerts);
+
+    mockGetCurrentUser.mockResolvedValue(adminUser);
+
+    const variantId = "variant-456";
+    const productId = "product-def";
+
+    (db as AnyDb).transaction = vi.fn(async (cb: (tx: AnyDb) => Promise<unknown>) => {
+      let selectCallCount = 0;
+      const txStub: AnyDb = {
+        select: vi.fn(() => {
+          selectCallCount++;
+          if (selectCallCount === 1) {
+            return { from: vi.fn(() => ({ where: vi.fn(async () => [{ id: productId }]) })) };
+          }
+          if (selectCallCount === 2) {
+            return { from: vi.fn(() => ({ where: vi.fn(async () => [{ id: variantId }]) })) };
+          }
+          // prev status is in_stock — no out_of_stock transition
+          return { from: vi.fn(() => ({ where: vi.fn(async () => [{ storeId: "store-1", status: "in_stock" }]) })) };
+        }),
+        update: vi.fn(() => ({ set: vi.fn(() => ({ where: vi.fn(async () => ({})) })) })),
+        delete: vi.fn(() => ({ where: vi.fn(async () => ({})) })),
+        insert: vi.fn(() => ({ values: vi.fn(async () => ({})) })),
+      };
+      return cb(txStub);
+    });
+
+    const payload = {
+      name: "Test Product",
+      slug: "test-product",
+      brandId: "brand-1",
+      description: "A test product description",
+      species: ["dog"] as const,
+      tags: [],
+      featured: false,
+      categoryIds: ["cat-1"],
+      images: [{ url: "https://example.com/img.jpg", alt: "Test" }],
+      variants: [
+        {
+          id: variantId,
+          sku: "TEST-001",
+          name: "Test Variant",
+          quantityValue: 1,
+          quantityUnit: "kg" as const,
+          priceAmount: 9990,
+          compareAtAmount: null,
+          barcode: null,
+          stockByStore: { "store-1": "low_stock" as const },
+        },
+      ],
+    };
+
+    const { updateProduct } = await getActions();
+    await updateProduct(productId, payload);
+
+    expect(mockDispatch).not.toHaveBeenCalled();
   });
 });

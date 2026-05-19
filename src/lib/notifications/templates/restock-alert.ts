@@ -2,6 +2,7 @@ export interface Data {
   productName: string;
   variantName?: string;
   storeName: string;
+  cancelUrl?: string;
 }
 
 export function render(data: Data): { subject: string; html: string; text: string } {
@@ -11,13 +12,32 @@ export function render(data: Data): { subject: string; html: string; text: strin
 
   const subject = `Reposición de stock — ${data.productName}`;
 
+  const cancelTextBlock = data.cancelUrl
+    ? `\nPara cancelar esta alerta: ${data.cancelUrl}`
+    : "";
+
   const text = [
     `¡Buenas noticias!`,
     "",
     `El producto "${productDisplay}" está disponible nuevamente en ${data.storeName}.`,
     "",
     "Visitanos para conseguirlo.",
+    ...(data.cancelUrl ? ["", `Para cancelar esta alerta: ${data.cancelUrl}`] : []),
   ].join("\n");
+
+  const cancelHtmlBlock = data.cancelUrl
+    ? `
+          <tr>
+            <td style="padding: 24px 32px 16px; border-top: 1px solid #e5e7eb;">
+              <p style="font-size: 12px; color: #9ca3af; margin: 0;">
+                Si no querés recibir más alertas para este producto,
+                <a href="${data.cancelUrl}" style="color: #6b7280; text-decoration: underline;">cancelá tu suscripción</a>.
+              </p>
+            </td>
+          </tr>`
+    : "";
+
+  void cancelTextBlock;
 
   const html = `<!DOCTYPE html>
 <html>
@@ -41,7 +61,7 @@ export function render(data: Data): { subject: string; html: string; text: strin
               </table>
               <p style="font-size: 14px; color: #6b7280; margin: 24px 0 0;">Visitanos para conseguirlo.</p>
             </td>
-          </tr>
+          </tr>${cancelHtmlBlock}
         </table>
       </td>
     </tr>

@@ -5,7 +5,10 @@ import { ProductPurchasePanel } from "./product-purchase-panel";
 import { useCartStore } from "@/stores/cart";
 import { getProductBySlug } from "@/lib/catalog";
 
-vi.mock("sonner", () => ({ toast: { success: vi.fn() } }));
+vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock("@/app/actions/restock-alerts", () => ({
+  createRestockAlert: vi.fn(async () => ({ ok: true, alertId: "alert-id", cancelToken: "tok-1" })),
+}));
 
 describe("ProductPurchasePanel", () => {
   beforeEach(() => useCartStore.getState().clear());
