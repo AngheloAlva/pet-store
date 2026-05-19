@@ -20,6 +20,13 @@ vi.mock("@/db", () => ({
       users: { findMany: vi.fn(async () => []), findFirst: vi.fn(async () => undefined) },
     },
     insert: vi.fn(() => ({ values: vi.fn(async () => ({})) })),
+    update: vi.fn(() => ({ set: vi.fn(() => ({ where: vi.fn(async () => ({})) })) })),
+    delete: vi.fn(() => ({ where: vi.fn(async () => ({})) })),
+    transaction: vi.fn(async (cb: (tx: unknown) => Promise<unknown>) => cb({
+      insert: vi.fn(() => ({ values: vi.fn(async () => ({})) })),
+      update: vi.fn(() => ({ set: vi.fn(() => ({ where: vi.fn(async () => ({})) })) })),
+      delete: vi.fn(() => ({ where: vi.fn(async () => ({})) })),
+    })),
   },
 }));
 

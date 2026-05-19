@@ -9,7 +9,7 @@ import {
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/admin", icon: SquaresFour, disabled: false },
-  { label: "Productos", href: "#", icon: Package, disabled: true },
+  { label: "Productos", href: "/admin/productos", icon: Package, disabled: false },
   { label: "Categorías", href: "#", icon: Tag, disabled: true },
   { label: "Sucursales", href: "#", icon: Storefront, disabled: true },
   { label: "Usuarios", href: "#", icon: Users, disabled: true },
