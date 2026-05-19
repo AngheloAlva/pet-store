@@ -12,6 +12,7 @@ import { seedScheduleConfigs, seedBlockedSlots } from "./seed-data/schedule-conf
 import { seedAppointments } from "./seed-data/appointments";
 import { seedPets } from "./seed-data/pets";
 import { seedPointsConfig, seedPointsTransactions } from "./seed-data/points";
+import { seedDemoEmails } from "./seed-data/demo-emails";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 type Db = PgliteDatabase<typeof schema>;
@@ -341,6 +342,19 @@ export async function applySeed(db: Db): Promise<void> {
         deltaPoints: schema.pointsTransactions.deltaPoints,
         balanceAfter: schema.pointsTransactions.balanceAfter,
         description: schema.pointsTransactions.description,
+      },
+    });
+
+  // --- demo_emails (Camila's 5 seed emails) ---
+  await db
+    .insert(schema.demoEmails)
+    .values(seedDemoEmails)
+    .onConflictDoUpdate({
+      target: schema.demoEmails.id,
+      set: {
+        subject: schema.demoEmails.subject,
+        bodyHtml: schema.demoEmails.bodyHtml,
+        bodyText: schema.demoEmails.bodyText,
       },
     });
 }

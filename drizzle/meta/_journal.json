@@ -29,6 +29,13 @@
       "when": 1779220034892,
       "tag": "0003_open_roughhouse",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1779223213661,
+      "tag": "0004_stormy_scrambler",
+      "breakpoints": true
     }
   ]
 }

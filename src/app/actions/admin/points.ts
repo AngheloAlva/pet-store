@@ -4,12 +4,9 @@ import { getCurrentUser } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { pointsTransactions, pointsConfig, pets } from "@/db/schema";
+import { pointsTransactions, pointsConfig, pets, users } from "@/db/schema";
 import { and, desc, eq, inArray, gte, sql } from "drizzle-orm";
-import {
-  sendDemoEmail,
-  DEMO_EMAIL_TEMPLATE,
-} from "@/lib/notifications/demo-email";
+import { sendDemoEmail } from "@/lib/notifications/demo-email";
 
 // ---------------------------------------------------------------------------
 // Auth helper
@@ -69,12 +66,16 @@ export async function addPointsTransaction(input: {
 
   revalidatePath("/admin/puntos");
 
-  // Best-effort email — errors are swallowed
-  sendDemoEmail({
-    to: input.userId,
-    template: DEMO_EMAIL_TEMPLATE.POINTS_ADJUSTMENT,
-    data: { deltaPoints: input.deltaPoints, balanceAfter: newBalance },
-  }).catch((err) => console.warn("[demo-email] failed", err));
+  try {
+    await sendDemoEmail({
+      to: input.userId,
+      toUserId: input.userId,
+      type: "points_adjustment",
+      data: { userName: input.userId, delta: input.deltaPoints, reason: input.description },
+    });
+  } catch (err) {
+    console.warn("[demo-email] points adjustment email failed", err);
+  }
 
   return { ok: true, balanceAfter: newBalance };
 }
@@ -173,12 +174,16 @@ export async function recordPresentialPurchase(input: {
 
   revalidatePath("/admin/puntos");
 
-  // Best-effort email
-  sendDemoEmail({
-    to: input.userId,
-    template: DEMO_EMAIL_TEMPLATE.POINTS_ADJUSTMENT,
-    data: { finalBalance, type: "purchase" },
-  }).catch((err) => console.warn("[demo-email] failed", err));
+  try {
+    await sendDemoEmail({
+      to: input.userId,
+      toUserId: input.userId,
+      type: "points_adjustment",
+      data: { userName: input.userId, delta: transactionIds.length, reason: input.description },
+    });
+  } catch (err) {
+    console.warn("[demo-email] presential purchase email failed", err);
+  }
 
   return { ok: true, finalBalance, transactionIds };
 }
@@ -268,15 +273,26 @@ export async function triggerPetBirthdayBonuses(input?: {
 
   revalidatePath("/admin/puntos");
 
-  // Best-effort emails for granted pets
+  // Best-effort emails for granted pets (S-HELPER-5: use user.email, not userId)
   for (const petId of granted) {
     const pet = eligiblePets.find((p) => p.id === petId);
-    if (pet) {
-      sendDemoEmail({
-        to: pet.userId,
-        template: DEMO_EMAIL_TEMPLATE.POINTS_ADJUSTMENT,
-        data: { petId, type: "pet_birthday_bonus" },
-      }).catch((err) => console.warn("[demo-email] failed", err));
+    if (!pet) continue;
+    try {
+      // Fetch user email — S-HELPER-5: pass email as `to`, not userId
+      const [userRow] = await db
+        .select({ email: users.email, name: users.name })
+        .from(users)
+        .where(eq(users.id, pet.userId));
+      if (userRow?.email) {
+        await sendDemoEmail({
+          to: userRow.email,
+          toUserId: pet.userId,
+          type: "points_adjustment",
+          data: { userName: userRow.name, delta: bonusAmount, reason: "Bono cumpleaños mascota" },
+        });
+      }
+    } catch (err) {
+      console.warn("[demo-email] birthday bonus email failed", err);
     }
   }
 

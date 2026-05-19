@@ -49,11 +49,25 @@ describe("seed determinism", () => {
     const { seedServices } = await import("@/db/seed-data/services");
     const { seedScheduleConfigs, seedBlockedSlots } = await import("@/db/seed-data/schedule-configs");
     const { seedAppointments } = await import("@/db/seed-data/appointments");
+    const { seedDemoEmails } = await import("@/db/seed-data/demo-emails");
 
     expect(seedServices.length).toBeGreaterThanOrEqual(3);
     expect(seedScheduleConfigs.length).toBeGreaterThan(0);
     expect(seedBlockedSlots.length).toBeGreaterThan(0);
     expect(seedAppointments.length).toBeGreaterThanOrEqual(8);
+    expect(seedDemoEmails.length).toBe(5);
+  });
+
+  it("S-SEED-1: demo emails seed has 5 rows with expected types for Camila", async () => {
+    const { seedDemoEmails } = await import("@/db/seed-data/demo-emails");
+    const types = seedDemoEmails.map((e) => e.type);
+    expect(types).toContain("welcome");
+    expect(types).toContain("appointment_confirmation");
+    expect(types).toContain("points_adjustment");
+    expect(types).toContain("restock_alert");
+    expect(types).toContain("appointment_canceled");
+    // All rows for Camila
+    expect(seedDemoEmails.every((e) => e.toEmail === "camila@demo.cl")).toBe(true);
   });
 
   it("seed data has fixed IDs (deterministic)", async () => {

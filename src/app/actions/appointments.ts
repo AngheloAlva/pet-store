@@ -10,7 +10,6 @@ import { z } from "zod";
 import {
   sendDemoEmail,
   enqueueAppointmentReminders,
-  DEMO_EMAIL_TEMPLATE,
 } from "@/lib/notifications/demo-email";
 import { differenceInMinutes } from "date-fns";
 
@@ -118,10 +117,24 @@ export async function createAppointment(
   // S-NOTIF-1: send confirmation email (non-blocking — fire and forget)
   await sendDemoEmail({
     to: user.email,
-    template: DEMO_EMAIL_TEMPLATE.APPOINTMENT_CONFIRMATION,
-    data: { appointmentId: result.id, userId: user.id },
+    toUserId: user.id,
+    type: "appointment_confirmation",
+    data: {
+      serviceName: data.serviceId,
+      startsAt,
+      storeName: data.storeId,
+      userName: user.name,
+    },
   });
-  await enqueueAppointmentReminders(result.id);
+  await enqueueAppointmentReminders({
+    appointmentId: result.id,
+    userEmail: user.email,
+    userId: user.id,
+    serviceName: data.serviceId,
+    startsAt,
+    storeName: data.storeId,
+    userName: user.name,
+  });
 
   revalidatePath("/cuenta/citas");
 
@@ -190,6 +203,23 @@ export async function cancelOwnAppointment(
   }
 
   revalidatePath("/cuenta/citas");
+
+  // S-ACTION-1: best-effort demo email — does NOT gate action success
+  try {
+    await sendDemoEmail({
+      to: user.email,
+      toUserId: user.id,
+      type: "appointment_canceled",
+      data: {
+        serviceName: data.appointmentId,
+        startsAt: new Date(),
+        storeName: "",
+        userName: user.name,
+      },
+    });
+  } catch (err) {
+    console.error("[demo-email] cancelOwnAppointment failed", err);
+  }
 
   return { ok: true };
 }

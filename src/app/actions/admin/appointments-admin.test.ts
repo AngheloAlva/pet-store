@@ -11,6 +11,9 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("@/lib/session", () => ({ getCurrentUser: vi.fn() }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("@/lib/notifications/demo-email", () => ({
+  sendDemoEmail: vi.fn(async () => ({ id: "mock-email-id" })),
+}));
 
 const mockGetCurrentUser = vi.mocked(getCurrentUser);
 const mockRedirect = vi.mocked(redirect);
@@ -153,6 +156,53 @@ describe("cancelAppointment", () => {
     const result = await cancelAppointment({ appointmentId: "appt-1" });
     expect(result.ok).toBe(false);
   });
+
+  it("S-ACTION-2: calls sendDemoEmail with appointment_canceled and triggeredBy=admin.id", async () => {
+    const { sendDemoEmail } = await import("@/lib/notifications/demo-email");
+    const mockSendDemoEmail = vi.mocked(sendDemoEmail);
+    mockSendDemoEmail.mockClear();
+
+    const mockTxSelect = vi.fn(() => ({
+      from: vi.fn(() => ({
+        where: vi.fn(async () => [
+          {
+            id: "appt-x",
+            status: "scheduled",
+            userId: "user-camila-demo",
+            startsAt: new Date(Date.now() + 30 * 60 * 1000),
+            serviceId: "svc-bath-trim",
+            storeId: "providencia",
+          },
+        ]),
+      })),
+    }));
+    const mockUpdate = vi.fn(() => ({
+      set: vi.fn(() => ({ where: vi.fn(async () => ({})) })),
+    }));
+    (db as AnyDb).transaction = vi.fn(
+      async (cb: (tx: AnyDb) => Promise<unknown>) =>
+        cb({ select: mockTxSelect, update: mockUpdate } as AnyDb),
+    );
+    // Mock post-tx user lookup
+    (db as AnyDb).select = vi.fn(() => ({
+      from: vi.fn(() => ({
+        where: vi.fn(async () => [{ email: "camila@demo.cl", name: "Camila Rojas" }]),
+      })),
+    }));
+
+    const { cancelAppointment } = await getActions();
+    const result = await cancelAppointment({
+      appointmentId: "appt-x",
+      cancelReason: "Admin override",
+    });
+    expect(result.ok).toBe(true);
+    expect(mockSendDemoEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "appointment_canceled",
+        triggeredBy: adminUser.id,
+      }),
+    );
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -195,6 +245,59 @@ describe("rescheduleAppointment", () => {
     });
     expect(result.ok).toBe(true);
     expect(mockRevalidatePath).toHaveBeenCalledWith("/admin/citas");
+  });
+
+  it("S-ACTION-3: calls sendDemoEmail with appointment_rescheduled on success", async () => {
+    const { sendDemoEmail } = await import("@/lib/notifications/demo-email");
+    const mockSendDemoEmail = vi.mocked(sendDemoEmail);
+    mockSendDemoEmail.mockClear();
+
+    let callCount = 0;
+    const mockTxSelect = vi.fn(() => ({
+      from: vi.fn(() => ({
+        where: vi.fn(async () => {
+          callCount++;
+          if (callCount === 1) {
+            return [{
+              id: "appt-1",
+              status: "scheduled",
+              storeId: "providencia",
+              serviceId: "svc-1",
+              userId: "user-camila-demo",
+              startsAt: new Date(FUTURE_START),
+            }];
+          }
+          return [];
+        }),
+      })),
+    }));
+    const mockUpdate = vi.fn(() => ({
+      set: vi.fn(() => ({ where: vi.fn(async () => ({})) })),
+    }));
+    (db as AnyDb).transaction = vi.fn(
+      async (cb: (tx: AnyDb) => Promise<unknown>) =>
+        cb({ select: mockTxSelect, update: mockUpdate } as AnyDb),
+    );
+    // Mock post-tx user lookup
+    (db as AnyDb).select = vi.fn(() => ({
+      from: vi.fn(() => ({
+        where: vi.fn(async () => [{ email: "camila@demo.cl", name: "Camila Rojas" }]),
+      })),
+    }));
+
+    const { rescheduleAppointment } = await getActions();
+    const result = await rescheduleAppointment({
+      appointmentId: "appt-1",
+      newStartsAt: FUTURE_START,
+      newEndsAt: FUTURE_END,
+    });
+    expect(result.ok).toBe(true);
+    expect(mockSendDemoEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "appointment_rescheduled",
+        triggeredBy: adminUser.id,
+      }),
+    );
   });
 
   it("S13: returns slot_unavailable when new slot has existing appointment", async () => {

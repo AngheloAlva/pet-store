@@ -20,9 +20,6 @@ vi.mock("next/cache", () => ({
 
 vi.mock("@/lib/notifications/demo-email", () => ({
   sendDemoEmail: vi.fn(async () => ({ id: "email-stub-id" })),
-  DEMO_EMAIL_TEMPLATE: {
-    POINTS_ADJUSTMENT: "points_adjustment",
-  },
 }));
 
 const mockGetCurrentUser = vi.mocked(getCurrentUser);
@@ -318,6 +315,64 @@ describe("triggerPetBirthdayBonuses", () => {
     await expect(actions.triggerPetBirthdayBonuses()).rejects.toThrow(/REDIRECT:\//);
   });
 
+  it("S-HELPER-5: sendDemoEmail called with to=user.email, not userId", async () => {
+    mockGetCurrentUser.mockResolvedValue(adminUser);
+    const { sendDemoEmail } = await import("@/lib/notifications/demo-email");
+    const mockSendDemoEmail = vi.mocked(sendDemoEmail);
+    mockSendDemoEmail.mockClear();
+
+    const tobPet = {
+      id: "pet-tobi-camila",
+      userId: "user-camila-demo",
+      birthDate: "2021-03-12",
+    };
+
+    let dbSelectCallCount = 0;
+    (db as AnyDb).select = vi.fn(() => ({
+      from: vi.fn(() => ({
+        where: vi.fn(async () => {
+          dbSelectCallCount++;
+          if (dbSelectCallCount === 1) {
+            // pointsConfig
+            return [{ earnRatePerCLP: 100, firstPurchaseBonus: 500, petBirthdayBonus: 200 }];
+          }
+          if (dbSelectCallCount === 2) {
+            // eligible pets
+            return [tobPet];
+          }
+          // 3rd call: user lookup for email
+          return [{ email: "camila@demo.cl", name: "Camila Rojas" }];
+        }),
+      })),
+    }));
+
+    (db as AnyDb).transaction = vi.fn(
+      async (cb: (tx: AnyDb) => Promise<unknown>) =>
+        cb({
+          select: vi.fn(() => ({
+            from: vi.fn(() => ({
+              where: vi.fn(() => ({
+                limit: vi.fn(async () => []),
+                orderBy: vi.fn(() => ({
+                  limit: vi.fn(async () => [{ balanceAfter: 0 }]),
+                })),
+              })),
+            })),
+          })),
+          insert: vi.fn(() => ({ values: vi.fn(async () => ({})) })),
+        } as AnyDb),
+    );
+
+    const actions = await getActions();
+    await actions.triggerPetBirthdayBonuses({ month: 3 });
+
+    expect(mockSendDemoEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ to: "camila@demo.cl" }),
+    );
+    const call = mockSendDemoEmail.mock.calls[0][0];
+    expect(call.to).not.toBe("user-camila-demo");
+  });
+
   it("grants bonus to eligible pet (S-ACTION-7)", async () => {
     mockGetCurrentUser.mockResolvedValue(adminUser);
 
@@ -337,8 +392,12 @@ describe("triggerPetBirthdayBonuses", () => {
             // get config
             return [{ earnRatePerCLP: 100, firstPurchaseBonus: 500, petBirthdayBonus: 200 }];
           }
-          // get pets with birthday in month
-          return [tobPet];
+          if (dbSelectCallCount === 2) {
+            // get pets with birthday in month
+            return [tobPet];
+          }
+          // 3rd call: user email lookup for email notification
+          return [{ email: "camila@demo.cl", name: "Camila Rojas" }];
         }),
       })),
     }));

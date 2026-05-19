@@ -13,10 +13,10 @@ vi.mock("@/lib/session", () => ({ getCurrentUser: vi.fn() }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/notifications/demo-email", () => ({
   sendDemoEmail: vi.fn(async () => ({ id: "mock-email-id" })),
-  enqueueAppointmentReminders: vi.fn(async () => {}),
+  enqueueAppointmentReminders: vi.fn(async () => ({ ids: ["id-24h", "id-2h"] })),
   DEMO_EMAIL_TEMPLATE: {
     APPOINTMENT_CONFIRMATION: "appointment_confirmation",
-    APPOINTMENT_CANCELLATION: "appointment_cancellation",
+    APPOINTMENT_CANCELED: "appointment_canceled",
     APPOINTMENT_REMINDER_24H: "appointment_reminder_24h",
     APPOINTMENT_REMINDER_2H: "appointment_reminder_2h",
   },
@@ -137,7 +137,7 @@ describe("createAppointment", () => {
     });
     expect(result.ok).toBe(true);
     expect(mockSendDemoEmail).toHaveBeenCalledWith(
-      expect.objectContaining({ template: "appointment_confirmation" }),
+      expect.objectContaining({ type: "appointment_confirmation" }),
     );
   });
 
@@ -314,5 +314,74 @@ describe("cancelOwnAppointment", () => {
     });
     expect(result.ok).toBe(true);
     expect(mockRevalidatePath).toHaveBeenCalledWith("/cuenta/citas");
+  });
+
+  it("S-ACTION-1: calls sendDemoEmail with type appointment_canceled after cancel", async () => {
+    const { sendDemoEmail } = await import("@/lib/notifications/demo-email");
+    const mockSendDemoEmail = vi.mocked(sendDemoEmail);
+    mockSendDemoEmail.mockClear();
+
+    const mockSelect = vi.fn(() => ({
+      from: vi.fn(() => ({
+        where: vi.fn(async () => [
+          {
+            id: "appt-cancel",
+            userId: "user-camila-demo",
+            status: "scheduled",
+            startsAt: new Date(Date.now() + 4 * 60 * 60 * 1000),
+          },
+        ]),
+      })),
+    }));
+    const mockUpdate = vi.fn(() => ({
+      set: vi.fn(() => ({ where: vi.fn(async () => ({})) })),
+    }));
+    (db as AnyDb).transaction = vi.fn(
+      async (cb: (tx: AnyDb) => Promise<unknown>) =>
+        cb({ select: mockSelect, update: mockUpdate } as AnyDb),
+    );
+
+    const { cancelOwnAppointment } = await getActions();
+    const result = await cancelOwnAppointment({
+      appointmentId: "appt-cancel",
+      cancelReason: "Cambio de planes",
+    });
+    expect(result.ok).toBe(true);
+    expect(mockSendDemoEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "appointment_canceled", to: camilaUser.email }),
+    );
+  });
+
+  it("S-ACTION-1: sendDemoEmail throw does NOT reject cancelOwnAppointment", async () => {
+    const { sendDemoEmail } = await import("@/lib/notifications/demo-email");
+    const mockSendDemoEmail = vi.mocked(sendDemoEmail);
+    mockSendDemoEmail.mockRejectedValueOnce(new Error("email failed"));
+
+    const mockSelect = vi.fn(() => ({
+      from: vi.fn(() => ({
+        where: vi.fn(async () => [
+          {
+            id: "appt-cancel2",
+            userId: "user-camila-demo",
+            status: "scheduled",
+            startsAt: new Date(Date.now() + 4 * 60 * 60 * 1000),
+          },
+        ]),
+      })),
+    }));
+    const mockUpdate = vi.fn(() => ({
+      set: vi.fn(() => ({ where: vi.fn(async () => ({})) })),
+    }));
+    (db as AnyDb).transaction = vi.fn(
+      async (cb: (tx: AnyDb) => Promise<unknown>) =>
+        cb({ select: mockSelect, update: mockUpdate } as AnyDb),
+    );
+
+    const { cancelOwnAppointment } = await getActions();
+    const result = await cancelOwnAppointment({
+      appointmentId: "appt-cancel2",
+      cancelReason: "Viaje",
+    });
+    expect(result.ok).toBe(true);
   });
 });

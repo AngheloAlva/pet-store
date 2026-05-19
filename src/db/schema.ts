@@ -361,6 +361,44 @@ export const pointsConfig = pgTable("points_config", {
 });
 
 // ---------------------------------------------------------------------------
+// demo_emails
+// ---------------------------------------------------------------------------
+export const DEMO_EMAIL_TYPE = [
+  "appointment_confirmation",
+  "appointment_reminder_24h",
+  "appointment_reminder_2h",
+  "appointment_canceled",
+  "appointment_rescheduled",
+  "restock_alert",
+  "welcome",
+  "points_adjustment",
+  "other",
+] as const;
+
+export type DemoEmailType = (typeof DEMO_EMAIL_TYPE)[number];
+
+export const demoEmails = pgTable(
+  "demo_emails",
+  {
+    id: text("id").primaryKey(),
+    toEmail: text("to_email").notNull(),
+    toUserId: text("to_user_id").references(() => users.id, { onDelete: "set null" }),
+    subject: text("subject").notNull(),
+    type: text("type").notNull(),
+    bodyHtml: text("body_html").notNull(),
+    bodyText: text("body_text").notNull(),
+    data: jsonb("data"),
+    triggeredBy: text("triggered_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("idx_demo_emails_created_at").on(t.createdAt),
+    index("idx_demo_emails_type_created_at").on(t.type, t.createdAt),
+    index("idx_demo_emails_to_user_created_at").on(t.toUserId, t.createdAt),
+  ],
+);
+
+// ---------------------------------------------------------------------------
 // Relations
 // ---------------------------------------------------------------------------
 export const brandsRelations = relations(brands, ({ many }) => ({
@@ -500,5 +538,18 @@ export const appointmentsRelations = relations(appointments, ({ one }) => ({
   pet: one(pets, {
     fields: [appointments.petId],
     references: [pets.id],
+  }),
+}));
+
+export const demoEmailsRelations = relations(demoEmails, ({ one }) => ({
+  toUser: one(users, {
+    fields: [demoEmails.toUserId],
+    references: [users.id],
+    relationName: "demo_emails_to_user",
+  }),
+  triggeredByUser: one(users, {
+    fields: [demoEmails.triggeredBy],
+    references: [users.id],
+    relationName: "demo_emails_triggered_by",
   }),
 }));

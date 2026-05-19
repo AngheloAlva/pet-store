@@ -4,13 +4,14 @@ import { getCurrentUser } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { appointments, APPOINTMENT_STATUS } from "@/db/schema";
+import { appointments, users, APPOINTMENT_STATUS } from "@/db/schema";
 import { eq, and, ne, lt, gt } from "drizzle-orm";
 import {
   updateAppointmentSchema,
   cancelAppointmentSchema,
   rescheduleAppointmentSchema,
 } from "./appointments-admin.schema";
+import { sendDemoEmail } from "@/lib/notifications/demo-email";
 
 // ---------------------------------------------------------------------------
 // Auth helper
@@ -82,7 +83,7 @@ export async function cancelAppointment(
   | { ok: true }
   | { ok: false; error: "not_found" | "validation_error"; details?: unknown }
 > {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const parsed = cancelAppointmentSchema.safeParse(input);
   if (!parsed.success) {
@@ -93,7 +94,14 @@ export async function cancelAppointment(
 
   const result = await db.transaction(async (tx) => {
     const rows = await tx
-      .select({ id: appointments.id, status: appointments.status, startsAt: appointments.startsAt })
+      .select({
+        id: appointments.id,
+        status: appointments.status,
+        startsAt: appointments.startsAt,
+        userId: appointments.userId,
+        serviceId: appointments.serviceId,
+        storeId: appointments.storeId,
+      })
       .from(appointments)
       .where(eq(appointments.id, data.appointmentId));
 
@@ -110,7 +118,7 @@ export async function cancelAppointment(
       })
       .where(eq(appointments.id, data.appointmentId));
 
-    return { ok: true as const };
+    return { ok: true as const, appt: rows[0] };
   });
 
   if (!result.ok) {
@@ -118,6 +126,30 @@ export async function cancelAppointment(
   }
 
   revalidatePath("/admin/citas");
+
+  // S-ACTION-2: best-effort demo email with triggeredBy=admin.id
+  try {
+    const [userRow] = await db
+      .select({ email: users.email, name: users.name })
+      .from(users)
+      .where(eq(users.id, result.appt.userId));
+    if (userRow) {
+      await sendDemoEmail({
+        to: userRow.email,
+        toUserId: result.appt.userId,
+        type: "appointment_canceled",
+        triggeredBy: admin.id,
+        data: {
+          serviceName: result.appt.serviceId,
+          startsAt: result.appt.startsAt,
+          storeName: result.appt.storeId,
+          userName: userRow.name,
+        },
+      });
+    }
+  } catch (err) {
+    console.error("[demo-email] admin cancelAppointment failed", err);
+  }
 
   return { ok: true };
 }
@@ -131,7 +163,7 @@ export async function rescheduleAppointment(
   | { ok: true }
   | { ok: false; error: "slot_unavailable" | "not_found" | "validation_error"; details?: unknown }
 > {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const parsed = rescheduleAppointmentSchema.safeParse(input);
   if (!parsed.success) {
@@ -150,6 +182,8 @@ export async function rescheduleAppointment(
         status: appointments.status,
         storeId: appointments.storeId,
         serviceId: appointments.serviceId,
+        userId: appointments.userId,
+        startsAt: appointments.startsAt,
       })
       .from(appointments)
       .where(eq(appointments.id, data.appointmentId));
@@ -186,7 +220,7 @@ export async function rescheduleAppointment(
       .set({ startsAt: newStart, endsAt: newEnd })
       .where(eq(appointments.id, data.appointmentId));
 
-    return { ok: true as const };
+    return { ok: true as const, appt };
   });
 
   if (!result.ok) {
@@ -194,6 +228,31 @@ export async function rescheduleAppointment(
   }
 
   revalidatePath("/admin/citas");
+
+  // S-ACTION-3: best-effort demo email with triggeredBy=admin.id
+  try {
+    const [userRow] = await db
+      .select({ email: users.email, name: users.name })
+      .from(users)
+      .where(eq(users.id, result.appt.userId));
+    if (userRow) {
+      await sendDemoEmail({
+        to: userRow.email,
+        toUserId: result.appt.userId,
+        type: "appointment_rescheduled",
+        triggeredBy: admin.id,
+        data: {
+          serviceName: result.appt.serviceId,
+          oldStartsAt: result.appt.startsAt,
+          newStartsAt: newStart,
+          storeName: result.appt.storeId,
+          userName: userRow.name,
+        },
+      });
+    }
+  } catch (err) {
+    console.error("[demo-email] admin rescheduleAppointment failed", err);
+  }
 
   return { ok: true };
 }
