@@ -6,6 +6,7 @@
 
 import * as schema from "./schema";
 import { brands, categories, products, stores, stockExceptions } from "@/test/fixtures";
+import { personas } from "./seed-data/personas";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 type Db = PgliteDatabase<typeof schema>;
@@ -218,5 +219,19 @@ export async function applySeed(db: Db): Promise<void> {
     .onConflictDoUpdate({
       target: [schema.stockLevels.variantId, schema.stockLevels.storeId],
       set: { status: schema.stockLevels.status },
+    });
+
+  // --- demo personas ---
+  await db
+    .insert(schema.users)
+    .values(personas)
+    .onConflictDoUpdate({
+      target: schema.users.id,
+      set: {
+        name: schema.users.name,
+        email: schema.users.email,
+        role: schema.users.role,
+        storeId: schema.users.storeId,
+      },
     });
 }
