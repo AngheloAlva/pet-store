@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { appointments, users, APPOINTMENT_STATUS } from "@/db/schema";
+import { requireStaffOrAdmin } from "@/lib/staff/auth";
 import { eq, and, ne, lt, gt } from "drizzle-orm";
 import {
   updateAppointmentSchema,
@@ -33,7 +34,7 @@ export async function updateAppointment(
   | { ok: true }
   | { ok: false; error: "not_found" | "invalid_status" | "validation_error"; details?: unknown }
 > {
-  await requireAdmin();
+  await requireStaffOrAdmin();
 
   const parsed = updateAppointmentSchema.safeParse(input);
   if (!parsed.success) {
@@ -70,6 +71,7 @@ export async function updateAppointment(
   }
 
   revalidatePath("/admin/citas");
+  revalidatePath("/staff");
 
   return { ok: true };
 }

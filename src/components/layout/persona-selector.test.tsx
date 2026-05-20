@@ -132,4 +132,39 @@ describe("PersonaSelector", () => {
       screen.queryByRole("menuitem", { name: /panel admin/i }),
     ).toBeNull();
   });
+
+  // S-UI-1
+  it("S-UI-1: staff role shows 'Vista Staff' link to /staff", async () => {
+    const user = userEvent.setup();
+    render(<PersonaSelector currentUser={mockStaffUser} />);
+
+    await user.click(screen.getByRole("button", { name: /menú de usuario/i }));
+
+    const staffLink = await screen.findByRole("menuitem", { name: /vista staff/i });
+    expect(staffLink).toBeInTheDocument();
+    expect(staffLink).toHaveAttribute("href", "/staff");
+  });
+
+  // S-UI-2
+  it("S-UI-2: admin role shows 'Vista Staff' link to /staff", async () => {
+    const user = userEvent.setup();
+    render(<PersonaSelector currentUser={mockAdminUser} />);
+
+    await user.click(screen.getByRole("button", { name: /menú de usuario/i }));
+
+    const staffLink = await screen.findByRole("menuitem", { name: /vista staff/i });
+    expect(staffLink).toBeInTheDocument();
+    expect(staffLink).toHaveAttribute("href", "/staff");
+  });
+
+  // S-UI-3
+  it("S-UI-3: customer role does NOT show 'Vista Staff' link", async () => {
+    const user = userEvent.setup();
+    render(<PersonaSelector currentUser={mockUser} />);
+
+    await user.click(screen.getByRole("button", { name: /menú de usuario/i }));
+    await screen.findByText("Cerrar sesión");
+
+    expect(screen.queryByRole("menuitem", { name: /vista staff/i })).toBeNull();
+  });
 });

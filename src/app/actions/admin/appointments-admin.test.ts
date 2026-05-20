@@ -10,6 +10,9 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 vi.mock("@/lib/session", () => ({ getCurrentUser: vi.fn() }));
+vi.mock("@/lib/staff/auth", () => ({
+  requireStaffOrAdmin: vi.fn(),
+}));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/notifications/demo-email", () => ({
   sendDemoEmail: vi.fn(async () => ({ id: "mock-email-id" })),
@@ -31,6 +34,15 @@ const adminUser = {
   isDemoSeed: false,
 };
 
+const staffUser = {
+  id: "user-staff-centro",
+  email: "staff@demo.cl",
+  name: "Vendedor Sucursal Centro",
+  role: "staff" as const,
+  storeId: "providencia",
+  isDemoSeed: true,
+};
+
 const customerUser = { ...adminUser, role: "customer" as const };
 
 const FUTURE_START = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1h from now
@@ -41,11 +53,82 @@ const getActions = async () => import("./appointments-admin");
 describe("requireAdmin guard — appointments-admin", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("updateAppointment: redirects to / for non-admin", async () => {
-    mockGetCurrentUser.mockResolvedValue(customerUser);
+  it("updateAppointment: redirects to / for non-staff/non-admin (via requireStaffOrAdmin mock)", async () => {
+    // updateAppointment now uses requireStaffOrAdmin — mock it to simulate a customer redirect
+    const staffAuth = await import("@/lib/staff/auth");
+    vi.mocked(staffAuth.requireStaffOrAdmin).mockImplementation(() => {
+      redirect("/");
+      return Promise.resolve(customerUser as never);
+    });
     const { updateAppointment } = await getActions();
     await expect(updateAppointment({})).rejects.toThrow(/REDIRECT:\//);
     expect(mockRedirect).toHaveBeenCalledWith("/");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// updateAppointment — staff gate (S-ACTION-1, S-ACTION-2, S-ACTION-3)
+// ---------------------------------------------------------------------------
+describe("updateAppointment — staff gate", () => {
+  let mockRequireStaffOrAdmin: ReturnType<typeof vi.fn>;
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    const staffAuth = await import("@/lib/staff/auth");
+    mockRequireStaffOrAdmin = vi.mocked(staffAuth.requireStaffOrAdmin);
+  });
+
+  // S-ACTION-1: staff can update appointment
+  it("S-ACTION-1: staff allowed — DB update succeeds, no redirect", async () => {
+    mockRequireStaffOrAdmin.mockResolvedValue(staffUser);
+    const mockSelect = vi.fn(() => ({
+      from: vi.fn(() => ({
+        where: vi.fn(async () => [{ id: "appt-1", status: "scheduled" }]),
+      })),
+    }));
+    const mockUpdate = vi.fn(() => ({
+      set: vi.fn(() => ({ where: vi.fn(async () => ({})) })),
+    }));
+    (db as AnyDb).transaction = vi.fn(
+      async (cb: (tx: AnyDb) => Promise<unknown>) =>
+        cb({ select: mockSelect, update: mockUpdate } as AnyDb),
+    );
+
+    const { updateAppointment } = await getActions();
+    const result = await updateAppointment({ appointmentId: "appt-1", status: "attended" });
+    expect(result.ok).toBe(true);
+    expect(mockRedirect).not.toHaveBeenCalled();
+  });
+
+  // S-ACTION-2: customer blocked
+  it("S-ACTION-2: customer blocked — throws redirect", async () => {
+    mockRequireStaffOrAdmin.mockImplementation(() => {
+      throw new Error("REDIRECT:/");
+    });
+    const { updateAppointment } = await getActions();
+    await expect(updateAppointment({ appointmentId: "appt-1", status: "attended" })).rejects.toThrow("REDIRECT:/");
+  });
+
+  // S-ACTION-3: both paths revalidated
+  it("S-ACTION-3: revalidates /admin/citas AND /staff on success", async () => {
+    mockRequireStaffOrAdmin.mockResolvedValue(staffUser);
+    const mockSelect = vi.fn(() => ({
+      from: vi.fn(() => ({
+        where: vi.fn(async () => [{ id: "appt-1", status: "scheduled" }]),
+      })),
+    }));
+    const mockUpdate = vi.fn(() => ({
+      set: vi.fn(() => ({ where: vi.fn(async () => ({})) })),
+    }));
+    (db as AnyDb).transaction = vi.fn(
+      async (cb: (tx: AnyDb) => Promise<unknown>) =>
+        cb({ select: mockSelect, update: mockUpdate } as AnyDb),
+    );
+
+    const { updateAppointment } = await getActions();
+    await updateAppointment({ appointmentId: "appt-1", status: "attended" });
+    expect(mockRevalidatePath).toHaveBeenCalledWith("/admin/citas");
+    expect(mockRevalidatePath).toHaveBeenCalledWith("/staff");
   });
 });
 

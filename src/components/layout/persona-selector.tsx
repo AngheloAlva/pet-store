@@ -55,6 +55,11 @@ export function PersonaSelector({ currentUser }: PersonaSelectorProps) {
                 Panel admin
               </DropdownMenuItem>
             )}
+            {(currentUser.role === "staff" || currentUser.role === "admin") && (
+              <DropdownMenuItem render={<Link href="/staff" />}>
+                Vista Staff
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem
               onClick={() =>
                 start(() => {
