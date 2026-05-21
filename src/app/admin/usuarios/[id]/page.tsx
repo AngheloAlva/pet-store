@@ -27,7 +27,7 @@ export default async function UsuarioDetailPage({ params }: Props) {
         user={user}
         stores={storeOptions}
         action={updateUserIdentity.bind(null, id)}
-        onDeleteSuccess={() => {
+        onDeleteSuccess={async () => {
           "use server";
           redirect("/admin/usuarios");
         }}

@@ -91,6 +91,7 @@ type StoreRow = {
   schedule: unknown;
   services: string[];
   reference: string | null;
+  imageUrl: string | null;
 };
 
 type StockLevelRow = {
