@@ -196,6 +196,7 @@ export function mapStore(row: StoreRow): Store {
     schedule: row.schedule as StoreSchedule,
     services: row.services as StoreService[],
     reference: row.reference ?? undefined,
+    imageUrl: row.imageUrl ?? undefined,
   };
 }
 

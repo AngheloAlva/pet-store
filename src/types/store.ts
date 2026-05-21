@@ -24,6 +24,7 @@ export type Store = {
   schedule: StoreSchedule;
   services: StoreService[];
   reference?: string;
+  imageUrl?: string | null;
 };
 
 export type StockLevel = {

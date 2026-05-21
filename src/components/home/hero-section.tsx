@@ -1,15 +1,31 @@
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, MapPin } from "@phosphor-icons/react/dist/ssr";
 import { buttonVariants } from "@/components/ui/button";
 import { Container } from "@/components/layout/container";
 import { cn } from "@/lib/utils";
+import { loremflickr } from "@/lib/demo-images";
+
+const heroImageUrl = loremflickr({ tags: ["dog", "cat"], seed: "home-hero", width: 1920, height: 1080 });
 
 export function HeroSection() {
   return (
-    <section className="relative overflow-hidden border-b border-border bg-gradient-to-b from-primary/10 via-background to-background">
+    <section className="relative overflow-hidden border-b border-border">
+      <Image
+        src={heroImageUrl}
+        alt=""
+        fill
+        priority
+        className="object-cover -z-20"
+        aria-hidden
+      />
       <div
         aria-hidden
-        className="absolute inset-0 -z-10 opacity-40 [background-image:radial-gradient(circle_at_1px_1px,var(--color-border)_1px,transparent_0)] [background-size:24px_24px]"
+        className="absolute inset-0 -z-10 bg-gradient-to-b from-primary/30 via-background/80 to-background"
+      />
+      <div
+        aria-hidden
+        className="absolute inset-0 -z-10 opacity-20 [background-image:radial-gradient(circle_at_1px_1px,var(--color-border)_1px,transparent_0)] [background-size:24px_24px]"
       />
       <Container className="py-20 md:py-28">
         <div className="max-w-2xl">

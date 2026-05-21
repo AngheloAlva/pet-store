@@ -4,6 +4,7 @@
  */
 import type { Brand, Category, Product, Store } from "@/types";
 import type { StockLevel, StockStatus } from "@/types";
+import { loremflickr, productImageTags } from "@/lib/demo-images";
 
 // ---------------------------------------------------------------------------
 // Brands
@@ -125,6 +126,7 @@ export const stores: Store[] = [
     schedule: { weekdays: "10:00 - 20:00", saturday: "10:00 - 19:00", sunday: "11:00 - 17:00" },
     services: ["shop", "vet", "grooming"],
     reference: "A una cuadra del Metro Los Leones",
+    imageUrl: loremflickr({ tags: ["pet", "store"], seed: "providencia", width: 800, height: 600 }),
   },
   {
     id: "las-condes",
@@ -137,6 +139,7 @@ export const stores: Store[] = [
     schedule: { weekdays: "10:00 - 21:00", saturday: "10:00 - 20:00", sunday: "11:00 - 18:00" },
     services: ["shop", "vet", "grooming", "pharmacy"],
     reference: "Frente al Metro Escuela Militar",
+    imageUrl: loremflickr({ tags: ["pet", "store"], seed: "las-condes", width: 800, height: 600 }),
   },
   {
     id: "nunoa",
@@ -148,6 +151,7 @@ export const stores: Store[] = [
     coordinates: { lat: -33.4565, lng: -70.5913 },
     schedule: { weekdays: "10:00 - 20:00", saturday: "10:00 - 19:00", sunday: "Cerrado" },
     services: ["shop", "grooming"],
+    imageUrl: loremflickr({ tags: ["pet", "store"], seed: "nunoa", width: 800, height: 600 }),
   },
   {
     id: "maipu",
@@ -160,6 +164,7 @@ export const stores: Store[] = [
     schedule: { weekdays: "10:00 - 20:00", saturday: "10:00 - 19:00", sunday: "11:00 - 17:00" },
     services: ["shop", "vet"],
     reference: "Mall Plaza Oeste",
+    imageUrl: loremflickr({ tags: ["pet", "store"], seed: "maipu", width: 800, height: 600 }),
   },
 ];
 
@@ -167,17 +172,9 @@ export const stores: Store[] = [
 // Products
 // ---------------------------------------------------------------------------
 
-const img = (color: string, text: string) =>
-  `https://placehold.co/800x800/${color}/FFFFFF?text=${encodeURIComponent(text)}`;
-
-const dogFoodImg = "8B4513";
-const catFoodImg = "6A5ACD";
-const snackImg = "D2691E";
-const toyImg = "228B22";
-const litterImg = "708090";
-const accessoryImg = "4682B4";
-const hygieneImg = "20B2AA";
-const exoticImg = "DAA520";
+function productImg(p: { id: string; species?: string | string[]; categoryIds: string[]; lifeStage?: string | null }): string {
+  return loremflickr({ tags: productImageTags(p), seed: p.id });
+}
 
 export const products: Product[] = [
   {
@@ -191,7 +188,7 @@ export const products: Product[] = [
     targetSize: ["medium"],
     shortDescription: "Alimento seco para perros adultos de raza mediana (11-25kg).",
     description: "Fórmula completa y balanceada diseñada para mantener la vitalidad de perros adultos de raza mediana entre los 12 meses y 7 años. Con proteínas de alta calidad y un equilibrio preciso de nutrientes.",
-    images: [{ url: img(dogFoodImg, "Royal Canin Medium Adult"), alt: "Royal Canin Medium Adult" }],
+    images: [{ url: productImg({ id: "rc-medium-adult", species: ["dog"], categoryIds: ["alimentos-perros"], lifeStage: "adult" }), alt: "Royal Canin Medium Adult" }],
     variants: [
       { id: "rc-ma-3", sku: "RC-MA-3KG", name: "3 kg", quantity: { value: 3, unit: "kg" }, price: { amount: 24990, currency: "CLP" } },
       { id: "rc-ma-8", sku: "RC-MA-8KG", name: "8 kg", quantity: { value: 8, unit: "kg" }, price: { amount: 49990, currency: "CLP" } },
@@ -210,7 +207,7 @@ export const products: Product[] = [
     lifeStage: "adult",
     shortDescription: "Nutrición avanzada para perros adultos con OptiBalance.",
     description: "Fórmula con pollo como ingrediente principal, rica en proteínas y con antioxidantes naturales para apoyar el sistema inmune.",
-    images: [{ url: img(dogFoodImg, "Pro Plan Adult"), alt: "Pro Plan Adult Complete" }],
+    images: [{ url: productImg({ id: "proplan-adult-complete", species: ["dog"], categoryIds: ["alimentos-perros"], lifeStage: "adult" }), alt: "Pro Plan Adult Complete" }],
     variants: [
       { id: "pp-ac-3", sku: "PP-AC-3KG", name: "3 kg", quantity: { value: 3, unit: "kg" }, price: { amount: 22990, currency: "CLP" } },
       { id: "pp-ac-75", sku: "PP-AC-75KG", name: "7.5 kg", quantity: { value: 7.5, unit: "kg" }, price: { amount: 42990, currency: "CLP" } },
@@ -228,7 +225,7 @@ export const products: Product[] = [
     lifeStage: "adult",
     shortDescription: "Nutrición basada en ciencia para perros adultos.",
     description: "Recomendado por veterinarios. Proteína de pollo de alta calidad, antioxidantes y vitamina E para un sistema inmune saludable.",
-    images: [{ url: img(dogFoodImg, "Hill's Adult"), alt: "Hill's Science Diet Adult" }],
+    images: [{ url: productImg({ id: "hills-adult", species: ["dog"], categoryIds: ["alimentos-perros"], lifeStage: "adult" }), alt: "Hill's Science Diet Adult" }],
     variants: [
       { id: "hl-ad-2", sku: "HL-AD-2KG", name: "2 kg", quantity: { value: 2, unit: "kg" }, price: { amount: 19990, currency: "CLP" } },
       { id: "hl-ad-75", sku: "HL-AD-75KG", name: "7.5 kg", quantity: { value: 7.5, unit: "kg" }, price: { amount: 54990, currency: "CLP" } },
@@ -246,7 +243,7 @@ export const products: Product[] = [
     lifeStage: "adult",
     shortDescription: "Alimento chileno premium para perros adultos.",
     description: "Elaborado en Chile con ingredientes de alta calidad. Fórmula balanceada para perros activos.",
-    images: [{ url: img(dogFoodImg, "Champion Adulto"), alt: "Champion Adulto" }],
+    images: [{ url: productImg({ id: "champion-adulto", species: ["dog"], categoryIds: ["alimentos-perros"], lifeStage: "adult" }), alt: "Champion Adulto" }],
     variants: [
       { id: "ch-ad-3", sku: "CH-AD-3KG", name: "3 kg", quantity: { value: 3, unit: "kg" }, price: { amount: 12990, currency: "CLP" } },
       { id: "ch-ad-8", sku: "CH-AD-8KG", name: "8 kg", quantity: { value: 8, unit: "kg" }, price: { amount: 24990, currency: "CLP" } },
@@ -265,7 +262,7 @@ export const products: Product[] = [
     lifeStage: "adult",
     shortDescription: "Alimento balanceado para perros adultos, fabricado en Chile.",
     description: "Nutrición completa para el día a día del perro adulto. Excelente relación precio-calidad.",
-    images: [{ url: img(dogFoodImg, "Master Dog"), alt: "Master Dog Adulto" }],
+    images: [{ url: productImg({ id: "masterdog-adulto", species: ["dog"], categoryIds: ["alimentos-perros"], lifeStage: "adult" }), alt: "Master Dog Adulto" }],
     variants: [
       { id: "md-ad-3", sku: "MD-AD-3KG", name: "3 kg", quantity: { value: 3, unit: "kg" }, price: { amount: 8990, currency: "CLP" } },
       { id: "md-ad-8", sku: "MD-AD-8KG", name: "8 kg", quantity: { value: 8, unit: "kg" }, price: { amount: 18990, currency: "CLP" } },
@@ -284,7 +281,7 @@ export const products: Product[] = [
     lifeStage: "adult",
     shortDescription: "Alimento clásico para perros adultos, sabor carne.",
     description: "Nutrición completa con el sabor que los perros aman. Fortalece huesos, músculos y dientes.",
-    images: [{ url: img(dogFoodImg, "Pedigree Adulto"), alt: "Pedigree Adulto" }],
+    images: [{ url: productImg({ id: "pedigree-adulto", species: ["dog"], categoryIds: ["alimentos-perros"], lifeStage: "adult" }), alt: "Pedigree Adulto" }],
     variants: [
       { id: "pd-ad-2", sku: "PD-AD-2KG", name: "2 kg", quantity: { value: 2, unit: "kg" }, price: { amount: 7990, currency: "CLP" } },
       { id: "pd-ad-8", sku: "PD-AD-8KG", name: "8 kg", quantity: { value: 8, unit: "kg" }, price: { amount: 19990, currency: "CLP" } },
@@ -303,7 +300,7 @@ export const products: Product[] = [
     targetSize: ["mini", "small"],
     shortDescription: "Alimento para cachorros de razas pequeñas hasta 10 meses.",
     description: "Nutrición adaptada al sistema digestivo sensible de cachorros pequeños. Kibble de tamaño reducido.",
-    images: [{ url: img(dogFoodImg, "RC Mini Puppy"), alt: "Royal Canin Mini Puppy" }],
+    images: [{ url: productImg({ id: "rc-puppy-mini", species: ["dog"], categoryIds: ["alimentos-perros"], lifeStage: "puppy" }), alt: "Royal Canin Mini Puppy" }],
     variants: [
       { id: "rc-mp-15", sku: "RC-MP-15KG", name: "1.5 kg", quantity: { value: 1.5, unit: "kg" }, price: { amount: 16990, currency: "CLP" } },
       { id: "rc-mp-4", sku: "RC-MP-4KG", name: "4 kg", quantity: { value: 4, unit: "kg" }, price: { amount: 38990, currency: "CLP" } },
@@ -320,7 +317,7 @@ export const products: Product[] = [
     lifeStage: "puppy",
     shortDescription: "Alimento para cachorros con DHA para desarrollo cerebral.",
     description: "Fórmula con calostro y DHA para apoyar el desarrollo del sistema nervioso y inmunológico del cachorro.",
-    images: [{ url: img(dogFoodImg, "Pro Plan Puppy"), alt: "Pro Plan Puppy" }],
+    images: [{ url: productImg({ id: "proplan-puppy", species: ["dog"], categoryIds: ["alimentos-perros"], lifeStage: "puppy" }), alt: "Pro Plan Puppy" }],
     variants: [
       { id: "pp-pu-3", sku: "PP-PU-3KG", name: "3 kg", quantity: { value: 3, unit: "kg" }, price: { amount: 24990, currency: "CLP" } },
       { id: "pp-pu-75", sku: "PP-PU-75KG", name: "7.5 kg", quantity: { value: 7.5, unit: "kg" }, price: { amount: 46990, currency: "CLP" } },
@@ -337,7 +334,7 @@ export const products: Product[] = [
     lifeStage: "adult",
     shortDescription: "Snack dental diario para reducir la placa y el sarro.",
     description: "Textura especial que ayuda a limpiar los dientes mientras el perro mastica. Reduce hasta 80% la acumulación de sarro.",
-    images: [{ url: img(snackImg, "Dentastix"), alt: "Pedigree Dentastix" }],
+    images: [{ url: productImg({ id: "pedigree-dentastix", species: ["dog"], categoryIds: ["snacks-perros", "higiene-perros"], lifeStage: "adult" }), alt: "Pedigree Dentastix" }],
     variants: [
       { id: "pd-dt-7", sku: "PD-DT-7", name: "Pack 7 unidades", quantity: { value: 7, unit: "unit" }, price: { amount: 3990, currency: "CLP" } },
       { id: "pd-dt-28", sku: "PD-DT-28", name: "Pack 28 unidades", quantity: { value: 28, unit: "unit" }, price: { amount: 12990, currency: "CLP" } },
@@ -353,7 +350,7 @@ export const products: Product[] = [
     species: ["dog"],
     shortDescription: "Galletas crocantes como premio para el entrenamiento.",
     description: "Premios crocantes sabor carne ideales para el entrenamiento o para consentir a tu perro.",
-    images: [{ url: img(snackImg, "Champion Premios"), alt: "Champion Premios Carne" }],
+    images: [{ url: productImg({ id: "champion-premios", species: ["dog"], categoryIds: ["snacks-perros"] }), alt: "Champion Premios Carne" }],
     variants: [
       { id: "ch-pr-500", sku: "CH-PR-500G", name: "500 g", quantity: { value: 500, unit: "g" }, price: { amount: 3490, currency: "CLP" } },
     ],
@@ -368,7 +365,7 @@ export const products: Product[] = [
     species: ["dog"],
     shortDescription: "Juguete de caucho resistente para morder y rellenar.",
     description: "El juguete Kong original. Hecho de caucho natural ultra-resistente. Se puede rellenar con premios para mantener a tu perro entretenido.",
-    images: [{ url: img(toyImg, "Kong Classic"), alt: "Kong Classic" }],
+    images: [{ url: productImg({ id: "kong-classic", species: ["dog"], categoryIds: ["juguetes-perros"] }), alt: "Kong Classic" }],
     variants: [
       { id: "kg-cl-s", sku: "KG-CL-S", name: "Small", quantity: { value: 1, unit: "unit" }, price: { amount: 8990, currency: "CLP" } },
       { id: "kg-cl-m", sku: "KG-CL-M", name: "Medium", quantity: { value: 1, unit: "unit" }, price: { amount: 12990, currency: "CLP" } },
@@ -386,7 +383,7 @@ export const products: Product[] = [
     species: ["dog"],
     shortDescription: "Pelotas de tenis especiales para perros.",
     description: "Material no abrasivo para los dientes. Perfectas para jugar a buscar.",
-    images: [{ url: img(toyImg, "Kong Tennis"), alt: "Kong Tennis Ball" }],
+    images: [{ url: productImg({ id: "kong-tennis", species: ["dog"], categoryIds: ["juguetes-perros"] }), alt: "Kong Tennis Ball" }],
     variants: [
       { id: "kg-tn-3", sku: "KG-TN-3", name: "Pack 3 unidades", quantity: { value: 3, unit: "unit" }, price: { amount: 6990, currency: "CLP" } },
       { id: "kg-tn-6", sku: "KG-TN-6", name: "Pack 6 unidades", quantity: { value: 6, unit: "unit" }, price: { amount: 12990, currency: "CLP" } },
@@ -402,7 +399,7 @@ export const products: Product[] = [
     species: ["dog"],
     shortDescription: "Collar resistente con ajuste rápido.",
     description: "Collar de nylon de alta resistencia con hebilla plástica de liberación rápida. Disponible en varios tamaños.",
-    images: [{ url: img(accessoryImg, "Collar Perro"), alt: "Collar Ajustable" }],
+    images: [{ url: productImg({ id: "collar-ajustable-perro", species: ["dog"], categoryIds: ["accesorios-perros"] }), alt: "Collar Ajustable" }],
     variants: [
       { id: "col-s", sku: "COL-S", name: "Talla S", quantity: { value: 1, unit: "unit" }, price: { amount: 4990, currency: "CLP" } },
       { id: "col-m", sku: "COL-M", name: "Talla M", quantity: { value: 1, unit: "unit" }, price: { amount: 5990, currency: "CLP" } },
@@ -419,7 +416,7 @@ export const products: Product[] = [
     species: ["dog"],
     shortDescription: "Correa retráctil con freno automático.",
     description: "Correa extensible hasta 5 metros con sistema de freno de un solo botón. Para perros de hasta 25kg.",
-    images: [{ url: img(accessoryImg, "Correa Retractil"), alt: "Correa Retráctil" }],
+    images: [{ url: productImg({ id: "correa-retractil", species: ["dog"], categoryIds: ["accesorios-perros"] }), alt: "Correa Retráctil" }],
     variants: [
       { id: "crr-5m", sku: "CRR-5M", name: "5 metros", quantity: { value: 1, unit: "unit" }, price: { amount: 14990, currency: "CLP" } },
     ],
@@ -434,7 +431,7 @@ export const products: Product[] = [
     species: ["dog"],
     shortDescription: "Shampoo suave para pieles sensibles.",
     description: "Fórmula hipoalergénica sin parabenos, ideal para perros con piel sensible o alérgica. pH balanceado.",
-    images: [{ url: img(hygieneImg, "Shampoo"), alt: "Shampoo Perros" }],
+    images: [{ url: productImg({ id: "shampoo-perros", species: ["dog"], categoryIds: ["higiene-perros"] }), alt: "Shampoo Perros" }],
     variants: [
       { id: "sh-500", sku: "SH-500ML", name: "500 ml", quantity: { value: 500, unit: "ml" }, price: { amount: 6990, currency: "CLP" } },
     ],
@@ -450,7 +447,7 @@ export const products: Product[] = [
     lifeStage: "adult",
     shortDescription: "Alimento para gatos adultos que viven en interior.",
     description: "Formulado para gatos adultos de interior entre 1 y 7 años. Reduce el olor de las heces y controla el peso.",
-    images: [{ url: img(catFoodImg, "RC Indoor 27"), alt: "Royal Canin Indoor 27" }],
+    images: [{ url: productImg({ id: "rc-indoor-27", species: ["cat"], categoryIds: ["alimentos-gatos"], lifeStage: "adult" }), alt: "Royal Canin Indoor 27" }],
     variants: [
       { id: "rc-in-15", sku: "RC-IN-15KG", name: "1.5 kg", quantity: { value: 1.5, unit: "kg" }, price: { amount: 16990, currency: "CLP" } },
       { id: "rc-in-4", sku: "RC-IN-4KG", name: "4 kg", quantity: { value: 4, unit: "kg" }, price: { amount: 39990, currency: "CLP" } },
@@ -469,7 +466,7 @@ export const products: Product[] = [
     lifeStage: "adult",
     shortDescription: "Alimento completo para gatos adultos con pollo.",
     description: "Con OptiRenal, apoya la salud renal de los gatos adultos. Alta digestibilidad.",
-    images: [{ url: img(catFoodImg, "Pro Plan Cat"), alt: "Pro Plan Adult Cat" }],
+    images: [{ url: productImg({ id: "proplan-adult-cat", species: ["cat"], categoryIds: ["alimentos-gatos"], lifeStage: "adult" }), alt: "Pro Plan Adult Cat" }],
     variants: [
       { id: "pp-ct-15", sku: "PP-CT-15KG", name: "1.5 kg", quantity: { value: 1.5, unit: "kg" }, price: { amount: 14990, currency: "CLP" } },
       { id: "pp-ct-3", sku: "PP-CT-3KG", name: "3 kg", quantity: { value: 3, unit: "kg" }, price: { amount: 26990, currency: "CLP" } },
@@ -487,7 +484,7 @@ export const products: Product[] = [
     lifeStage: "adult",
     shortDescription: "Nutrición científica para gatos adultos.",
     description: "Con taurina, vitamina E y omega-6 para apoyar una piel y pelaje saludables.",
-    images: [{ url: img(catFoodImg, "Hill's Cat"), alt: "Hill's Cat Adult" }],
+    images: [{ url: productImg({ id: "hills-cat-adult", species: ["cat"], categoryIds: ["alimentos-gatos"], lifeStage: "adult" }), alt: "Hill's Cat Adult" }],
     variants: [
       { id: "hl-ca-15", sku: "HL-CA-15KG", name: "1.5 kg", quantity: { value: 1.5, unit: "kg" }, price: { amount: 17990, currency: "CLP" } },
       { id: "hl-ca-35", sku: "HL-CA-35KG", name: "3.5 kg", quantity: { value: 3.5, unit: "kg" }, price: { amount: 36990, currency: "CLP" } },
@@ -504,7 +501,7 @@ export const products: Product[] = [
     lifeStage: "adult",
     shortDescription: "Alimento seco para gatos adultos, sabor carne.",
     description: "Nutrición completa y balanceada con el sabor que los gatos aman.",
-    images: [{ url: img(catFoodImg, "Whiskas Adulto"), alt: "Whiskas Adulto" }],
+    images: [{ url: productImg({ id: "whiskas-adulto", species: ["cat"], categoryIds: ["alimentos-gatos"], lifeStage: "adult" }), alt: "Whiskas Adulto" }],
     variants: [
       { id: "wk-ad-1", sku: "WK-AD-1KG", name: "1 kg", quantity: { value: 1, unit: "kg" }, price: { amount: 4990, currency: "CLP" } },
       { id: "wk-ad-3", sku: "WK-AD-3KG", name: "3 kg", quantity: { value: 3, unit: "kg" }, price: { amount: 12990, currency: "CLP" } },
@@ -522,7 +519,7 @@ export const products: Product[] = [
     lifeStage: "adult",
     shortDescription: "Alimento balanceado para gatos adultos, fabricado en Chile.",
     description: "Nutrición completa para gatos adultos. Buen sabor, buen precio.",
-    images: [{ url: img(catFoodImg, "Master Cat"), alt: "Master Cat Adulto" }],
+    images: [{ url: productImg({ id: "mastercat-adulto", species: ["cat"], categoryIds: ["alimentos-gatos"], lifeStage: "adult" }), alt: "Master Cat Adulto" }],
     variants: [
       { id: "mc-ad-1", sku: "MC-AD-1KG", name: "1 kg", quantity: { value: 1, unit: "kg" }, price: { amount: 3990, currency: "CLP" } },
       { id: "mc-ad-3", sku: "MC-AD-3KG", name: "3 kg", quantity: { value: 3, unit: "kg" }, price: { amount: 9990, currency: "CLP" } },
@@ -540,7 +537,7 @@ export const products: Product[] = [
     lifeStage: "puppy",
     shortDescription: "Alimento para gatitos hasta los 12 meses.",
     description: "Fórmula específica para gatitos en crecimiento. Apoya el desarrollo del sistema inmune.",
-    images: [{ url: img(catFoodImg, "RC Kitten"), alt: "Royal Canin Kitten" }],
+    images: [{ url: productImg({ id: "rc-kitten", species: ["cat"], categoryIds: ["alimentos-gatos"], lifeStage: "puppy" }), alt: "Royal Canin Kitten" }],
     variants: [
       { id: "rc-kt-400", sku: "RC-KT-400G", name: "400 g", quantity: { value: 400, unit: "g" }, price: { amount: 7990, currency: "CLP" } },
       { id: "rc-kt-2", sku: "RC-KT-2KG", name: "2 kg", quantity: { value: 2, unit: "kg" }, price: { amount: 22990, currency: "CLP" } },
@@ -557,7 +554,7 @@ export const products: Product[] = [
     species: ["cat"],
     shortDescription: "Arena aglomerante con control de olor por 14 días.",
     description: "Forma grumos firmes para fácil limpieza. Neutraliza olores por hasta 14 días.",
-    images: [{ url: img(litterImg, "Tidy Cats"), alt: "Tidy Cats Arena" }],
+    images: [{ url: productImg({ id: "tidycats-aglomerante", species: ["cat"], categoryIds: ["arenas-gatos"] }), alt: "Tidy Cats Arena" }],
     variants: [
       { id: "tc-ag-4", sku: "TC-AG-4KG", name: "4 kg", quantity: { value: 4, unit: "kg" }, price: { amount: 8990, currency: "CLP" } },
       { id: "tc-ag-10", sku: "TC-AG-10KG", name: "10 kg", quantity: { value: 10, unit: "kg" }, price: { amount: 19990, currency: "CLP" } },
@@ -573,7 +570,7 @@ export const products: Product[] = [
     species: ["cat"],
     shortDescription: "Arena de cristales de sílica, alta absorción.",
     description: "Absorbe la humedad y neutraliza olores inmediatamente. Dura hasta 30 días por gato.",
-    images: [{ url: img(litterImg, "Arena Silica"), alt: "Arena de Sílica" }],
+    images: [{ url: productImg({ id: "arena-silica", species: ["cat"], categoryIds: ["arenas-gatos"] }), alt: "Arena de Sílica" }],
     variants: [
       { id: "ar-sl-38", sku: "AR-SL-38L", name: "3.8 L", quantity: { value: 3800, unit: "ml" }, price: { amount: 11990, currency: "CLP" } },
     ],
@@ -588,7 +585,7 @@ export const products: Product[] = [
     species: ["cat"],
     shortDescription: "Snack crujiente por fuera, suave por dentro.",
     description: "Premios irresistibles para gatos. Sabor salmón. Menos de 2 calorías por snack.",
-    images: [{ url: img(snackImg, "Temptations"), alt: "Whiskas Temptations" }],
+    images: [{ url: productImg({ id: "whiskas-temptations", species: ["cat"], categoryIds: ["snacks-gatos"] }), alt: "Whiskas Temptations" }],
     variants: [
       { id: "wk-tm-60", sku: "WK-TM-60G", name: "60 g", quantity: { value: 60, unit: "g" }, price: { amount: 2490, currency: "CLP" } },
       { id: "wk-tm-160", sku: "WK-TM-160G", name: "160 g", quantity: { value: 160, unit: "g" }, price: { amount: 5990, currency: "CLP" } },
@@ -604,7 +601,7 @@ export const products: Product[] = [
     species: ["cat"],
     shortDescription: "Juguete de felpa relleno con catnip.",
     description: "Pequeño ratón de felpa con catnip natural. Estimula el instinto de caza del gato.",
-    images: [{ url: img(toyImg, "Raton Catnip"), alt: "Ratón con Catnip" }],
+    images: [{ url: productImg({ id: "raton-felpa", species: ["cat"], categoryIds: ["juguetes-gatos"] }), alt: "Ratón con Catnip" }],
     variants: [
       { id: "rt-cn-1", sku: "RT-CN-1", name: "Unidad", quantity: { value: 1, unit: "unit" }, price: { amount: 2990, currency: "CLP" } },
       { id: "rt-cn-3", sku: "RT-CN-3", name: "Pack 3 unidades", quantity: { value: 3, unit: "unit" }, price: { amount: 6990, currency: "CLP" } },
@@ -620,7 +617,7 @@ export const products: Product[] = [
     species: ["cat"],
     shortDescription: "Rascador de cartón con catnip incluido.",
     description: "Cartón corrugado de alta densidad. Incluye sobre de catnip. Protege tus muebles.",
-    images: [{ url: img(toyImg, "Rascador"), alt: "Rascador de Cartón" }],
+    images: [{ url: productImg({ id: "rascador-carton", species: ["cat"], categoryIds: ["juguetes-gatos", "accesorios-gatos"] }), alt: "Rascador de Cartón" }],
     variants: [
       { id: "rs-ct-1", sku: "RS-CT-1", name: "Unidad", quantity: { value: 1, unit: "unit" }, price: { amount: 8990, currency: "CLP" } },
     ],
@@ -635,7 +632,7 @@ export const products: Product[] = [
     species: ["cat"],
     shortDescription: "Arenero con tapa y filtro de carbón.",
     description: "Diseño cerrado para mayor privacidad. Filtro de carbón activo para controlar olores. Incluye pala.",
-    images: [{ url: img(accessoryImg, "Arenero"), alt: "Arenero Cubierto" }],
+    images: [{ url: productImg({ id: "arenero-cubierto", species: ["cat"], categoryIds: ["accesorios-gatos"] }), alt: "Arenero Cubierto" }],
     variants: [
       { id: "an-cb-1", sku: "AN-CB-1", name: "Unidad", quantity: { value: 1, unit: "unit" }, price: { amount: 22990, currency: "CLP" } },
     ],
@@ -650,7 +647,7 @@ export const products: Product[] = [
     species: ["bird"],
     shortDescription: "Mezcla balanceada de semillas para canarios.",
     description: "Mezcla de alpiste, avena pelada, lechuguilla y cañamón. Nutrición completa para canarios.",
-    images: [{ url: img(exoticImg, "Alimento Canarios"), alt: "Alimento Canarios" }],
+    images: [{ url: productImg({ id: "alimento-canarios", species: ["bird"], categoryIds: ["aves"] }), alt: "Alimento Canarios" }],
     variants: [
       { id: "cn-500", sku: "CN-500G", name: "500 g", quantity: { value: 500, unit: "g" }, price: { amount: 2990, currency: "CLP" } },
       { id: "cn-1", sku: "CN-1KG", name: "1 kg", quantity: { value: 1, unit: "kg" }, price: { amount: 4990, currency: "CLP" } },
@@ -666,7 +663,7 @@ export const products: Product[] = [
     species: ["bird"],
     shortDescription: "Mezcla variada para loros, agapornis y periquitos.",
     description: "Incluye girasol, maíz, maní, semillas de calabaza y frutos secos. Alta palatabilidad para aves medianas.",
-    images: [{ url: img(exoticImg, "Alimento Loros"), alt: "Alimento Loros" }],
+    images: [{ url: productImg({ id: "alimento-loros", species: ["bird"], categoryIds: ["aves"] }), alt: "Alimento Loros" }],
     variants: [
       { id: "lr-500", sku: "LR-500G", name: "500 g", quantity: { value: 500, unit: "g" }, price: { amount: 4490, currency: "CLP" } },
       { id: "lr-1", sku: "LR-1KG", name: "1 kg", quantity: { value: 1, unit: "kg" }, price: { amount: 7990, currency: "CLP" } },
@@ -682,7 +679,7 @@ export const products: Product[] = [
     species: ["bird"],
     shortDescription: "Set de perchas de madera natural para jaulas.",
     description: "Perchas de eucalipto natural que ayudan a desgastar las uñas de las aves. Compatible con la mayoría de jaulas.",
-    images: [{ url: img(accessoryImg, "Perchas"), alt: "Perchas de Madera" }],
+    images: [{ url: productImg({ id: "perchas-madera", species: ["bird"], categoryIds: ["aves"] }), alt: "Perchas de Madera" }],
     variants: [
       { id: "pe-md-3", sku: "PE-MD-3", name: "Set 3 unidades", quantity: { value: 3, unit: "unit" }, price: { amount: 4990, currency: "CLP" } },
     ],
@@ -697,7 +694,7 @@ export const products: Product[] = [
     species: ["bird"],
     shortDescription: "Bebedero colgante con capacidad de 150ml.",
     description: "Diseño anti-derrame, fácil de limpiar. Se engancha a los barrotes de la jaula.",
-    images: [{ url: img(accessoryImg, "Bebedero"), alt: "Bebedero Aves" }],
+    images: [{ url: productImg({ id: "bebedero-aves", species: ["bird"], categoryIds: ["aves"] }), alt: "Bebedero Aves" }],
     variants: [
       { id: "bb-av-1", sku: "BB-AV-1", name: "Unidad", quantity: { value: 1, unit: "unit" }, price: { amount: 2490, currency: "CLP" } },
     ],
@@ -712,7 +709,7 @@ export const products: Product[] = [
     species: ["small_pet"],
     shortDescription: "Mezcla completa para hamsters con frutas y semillas.",
     description: "Incluye granos, semillas, frutos secos y vegetales deshidratados. Nutrición completa para hamsters sirios y rusos.",
-    images: [{ url: img(exoticImg, "Alimento Hamsters"), alt: "Alimento Hamsters" }],
+    images: [{ url: productImg({ id: "alimento-hamsters", species: ["small_pet"], categoryIds: ["pequenas-mascotas"] }), alt: "Alimento Hamsters" }],
     variants: [
       { id: "hm-500", sku: "HM-500G", name: "500 g", quantity: { value: 500, unit: "g" }, price: { amount: 3490, currency: "CLP" } },
       { id: "hm-1", sku: "HM-1KG", name: "1 kg", quantity: { value: 1, unit: "kg" }, price: { amount: 5990, currency: "CLP" } },
@@ -728,7 +725,7 @@ export const products: Product[] = [
     species: ["small_pet"],
     shortDescription: "Pellets nutricionalmente completos para conejos domésticos.",
     description: "Alto en fibra, con vitaminas A, D y E. Ideal para conejos adultos. No sustituye el heno como base de la dieta.",
-    images: [{ url: img(exoticImg, "Alimento Conejos"), alt: "Alimento Conejos" }],
+    images: [{ url: productImg({ id: "alimento-conejos", species: ["small_pet"], categoryIds: ["pequenas-mascotas"] }), alt: "Alimento Conejos" }],
     variants: [
       { id: "cj-1", sku: "CJ-1KG", name: "1 kg", quantity: { value: 1, unit: "kg" }, price: { amount: 5490, currency: "CLP" } },
       { id: "cj-3", sku: "CJ-3KG", name: "3 kg", quantity: { value: 3, unit: "kg" }, price: { amount: 13990, currency: "CLP" } },
@@ -744,7 +741,7 @@ export const products: Product[] = [
     species: ["small_pet"],
     shortDescription: "Pellets fortificados con vitamina C para cobayas.",
     description: "Las cobayas no sintetizan vitamina C naturalmente. Este alimento la aporta en cantidades adecuadas.",
-    images: [{ url: img(exoticImg, "Alimento Cobayas"), alt: "Alimento Cobayas" }],
+    images: [{ url: productImg({ id: "alimento-cobayas", species: ["small_pet"], categoryIds: ["pequenas-mascotas"] }), alt: "Alimento Cobayas" }],
     variants: [
       { id: "cb-1", sku: "CB-1KG", name: "1 kg", quantity: { value: 1, unit: "kg" }, price: { amount: 5990, currency: "CLP" } },
     ],
@@ -759,7 +756,7 @@ export const products: Product[] = [
     species: ["small_pet"],
     shortDescription: "Heno de primera calidad, base de la dieta de conejos y cobayas.",
     description: "Heno timothy de corte selecto. Alto en fibra, esencial para la salud digestiva y dental de conejos, cobayas y chinchillas.",
-    images: [{ url: img(exoticImg, "Heno Timothy"), alt: "Heno Timothy" }],
+    images: [{ url: productImg({ id: "heno-timothy", species: ["small_pet"], categoryIds: ["pequenas-mascotas"] }), alt: "Heno Timothy" }],
     variants: [
       { id: "hn-500", sku: "HN-500G", name: "500 g", quantity: { value: 500, unit: "g" }, price: { amount: 4990, currency: "CLP" } },
       { id: "hn-1", sku: "HN-1KG", name: "1 kg", quantity: { value: 1, unit: "kg" }, price: { amount: 8990, currency: "CLP" } },
@@ -775,7 +772,7 @@ export const products: Product[] = [
     species: ["small_pet"],
     shortDescription: "Rueda silenciosa de 20cm para hamsters.",
     description: "Diseño sin barra central para proteger la columna del hamster. Rodamientos silenciosos para no molestar de noche.",
-    images: [{ url: img(toyImg, "Rueda Ejercicio"), alt: "Rueda de Ejercicio" }],
+    images: [{ url: productImg({ id: "rueda-ejercicio", species: ["small_pet"], categoryIds: ["pequenas-mascotas"] }), alt: "Rueda de Ejercicio" }],
     variants: [
       { id: "rd-20", sku: "RD-20", name: "20 cm", quantity: { value: 1, unit: "unit" }, price: { amount: 9990, currency: "CLP" } },
     ],
@@ -790,7 +787,7 @@ export const products: Product[] = [
     species: ["small_pet"],
     shortDescription: "Sustrato absorbente para jaulas de pequeñas mascotas.",
     description: "Viruta de pino libre de polvo, alta absorción. Ideal para el fondo de jaulas de hamsters, cobayas y conejos.",
-    images: [{ url: img(litterImg, "Viruta"), alt: "Viruta de Pino" }],
+    images: [{ url: productImg({ id: "viruta-sustrato", species: ["small_pet"], categoryIds: ["pequenas-mascotas"] }), alt: "Viruta de Pino" }],
     variants: [
       { id: "vr-3", sku: "VR-3L", name: "3 L", quantity: { value: 3000, unit: "ml" }, price: { amount: 3490, currency: "CLP" } },
       { id: "vr-10", sku: "VR-10L", name: "10 L", quantity: { value: 10000, unit: "ml" }, price: { amount: 8990, currency: "CLP" } },
@@ -806,7 +803,7 @@ export const products: Product[] = [
     species: ["fish"],
     shortDescription: "Alimento en hojuelas para peces tropicales de agua dulce.",
     description: "Fórmula balanceada con proteínas marinas y vegetales. Realza los colores naturales. No enturbia el agua.",
-    images: [{ url: img(exoticImg, "Peces Tropicales"), alt: "Alimento Peces Tropicales" }],
+    images: [{ url: productImg({ id: "alimento-peces-tropical", species: ["fish"], categoryIds: ["peces"] }), alt: "Alimento Peces Tropicales" }],
     variants: [
       { id: "pz-tr-50", sku: "PZ-TR-50G", name: "50 g", quantity: { value: 50, unit: "g" }, price: { amount: 3490, currency: "CLP" } },
       { id: "pz-tr-200", sku: "PZ-TR-200G", name: "200 g", quantity: { value: 200, unit: "g" }, price: { amount: 9990, currency: "CLP" } },
@@ -822,7 +819,7 @@ export const products: Product[] = [
     species: ["fish"],
     shortDescription: "Gránulos flotantes específicos para peces dorados.",
     description: "Formulado para las necesidades nutricionales del goldfish. Gránulos que flotan para reducir el desperdicio.",
-    images: [{ url: img(exoticImg, "Goldfish"), alt: "Alimento Goldfish" }],
+    images: [{ url: productImg({ id: "alimento-goldfish", species: ["fish"], categoryIds: ["peces"] }), alt: "Alimento Goldfish" }],
     variants: [
       { id: "pz-gf-100", sku: "PZ-GF-100G", name: "100 g", quantity: { value: 100, unit: "g" }, price: { amount: 4490, currency: "CLP" } },
     ],
@@ -837,7 +834,7 @@ export const products: Product[] = [
     species: ["fish"],
     shortDescription: "Neutraliza cloro y metales pesados del agua del grifo.",
     description: "Hace el agua del grifo segura para peces de inmediato. Elimina cloro, cloraminas y metales pesados.",
-    images: [{ url: img(hygieneImg, "Acondicionador"), alt: "Acondicionador de Agua" }],
+    images: [{ url: productImg({ id: "acondicionador-agua", species: ["fish"], categoryIds: ["peces"] }), alt: "Acondicionador de Agua" }],
     variants: [
       { id: "ac-ag-250", sku: "AC-AG-250ML", name: "250 ml", quantity: { value: 250, unit: "ml" }, price: { amount: 5990, currency: "CLP" } },
       { id: "ac-ag-500", sku: "AC-AG-500ML", name: "500 ml", quantity: { value: 500, unit: "ml" }, price: { amount: 9990, currency: "CLP" } },
@@ -853,7 +850,7 @@ export const products: Product[] = [
     species: ["fish"],
     shortDescription: "Filtro interno sumergible para peceras hasta 60L.",
     description: "Filtración mecánica y biológica en un solo equipo. Bajo consumo energético. Fácil mantenimiento.",
-    images: [{ url: img(accessoryImg, "Filtro Pecera"), alt: "Filtro Pecera" }],
+    images: [{ url: productImg({ id: "filtro-pecera", species: ["fish"], categoryIds: ["peces"] }), alt: "Filtro Pecera" }],
     variants: [
       { id: "fl-60", sku: "FL-60L", name: "Hasta 60 L", quantity: { value: 1, unit: "unit" }, price: { amount: 18990, currency: "CLP" } },
     ],
@@ -868,7 +865,7 @@ export const products: Product[] = [
     species: ["reptile"],
     shortDescription: "Pellets flotantes con calcio para tortugas de agua.",
     description: "Alto contenido de calcio para el desarrollo óptimo del caparazón. Con camarones liofilizados.",
-    images: [{ url: img(exoticImg, "Tortugas"), alt: "Alimento Tortugas" }],
+    images: [{ url: productImg({ id: "alimento-tortugas", species: ["reptile"], categoryIds: ["reptiles"] }), alt: "Alimento Tortugas" }],
     variants: [
       { id: "tr-100", sku: "TR-100G", name: "100 g", quantity: { value: 100, unit: "g" }, price: { amount: 4990, currency: "CLP" } },
       { id: "tr-250", sku: "TR-250G", name: "250 g", quantity: { value: 250, unit: "g" }, price: { amount: 9990, currency: "CLP" } },
@@ -884,7 +881,7 @@ export const products: Product[] = [
     species: ["reptile"],
     shortDescription: "Suplemento de calcio esencial para reptiles.",
     description: "Se espolvorea sobre los alimentos. Previene enfermedades óseas metabólicas. Con vitamina D3 para absorción.",
-    images: [{ url: img(hygieneImg, "Calcio"), alt: "Calcio Reptiles" }],
+    images: [{ url: productImg({ id: "calcio-reptiles", species: ["reptile"], categoryIds: ["reptiles"] }), alt: "Calcio Reptiles" }],
     variants: [
       { id: "cl-100", sku: "CL-100G", name: "100 g", quantity: { value: 100, unit: "g" }, price: { amount: 6990, currency: "CLP" } },
     ],
@@ -899,7 +896,7 @@ export const products: Product[] = [
     species: ["reptile"],
     shortDescription: "Lámpara UVB esencial para reptiles diurnos.",
     description: "Emite radiación UVB necesaria para la síntesis de vitamina D3. Imprescindible para iguanas, dragones barbudos y tortugas.",
-    images: [{ url: img(accessoryImg, "Lampara UVB"), alt: "Lámpara UVB" }],
+    images: [{ url: productImg({ id: "lampara-uvb", species: ["reptile"], categoryIds: ["reptiles"] }), alt: "Lámpara UVB" }],
     variants: [
       { id: "uv-13w", sku: "UV-13W", name: "13 W", quantity: { value: 1, unit: "unit" }, price: { amount: 18990, currency: "CLP" } },
       { id: "uv-26w", sku: "UV-26W", name: "26 W", quantity: { value: 1, unit: "unit" }, price: { amount: 26990, currency: "CLP" } },

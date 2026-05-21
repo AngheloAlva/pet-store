@@ -6,6 +6,8 @@
  * Each published post has 2-3 related products.
  */
 
+import { loremflickr, blogHeroTags } from "@/lib/demo-images";
+
 // Deterministic base date: 2026-05-19
 const BASE_DATE = new Date("2026-05-19T00:00:00Z");
 
@@ -49,7 +51,7 @@ El baño regular, el cepillado del pelaje y el corte de uñas son parte del cuid
 ## Visitas al veterinario
 
 Las revisiones anuales y las vacunas al día son indispensables para prevenir enfermedades y detectar problemas a tiempo.`,
-    heroImageUrl: "https://placehold.co/800x450/8B0000/FFFFFF?text=Cuidados+Perros",
+    heroImageUrl: loremflickr({ tags: blogHeroTags({ category: "cuidados", species: ["dog"] }), seed: "cuidados-basicos-para-perros", width: 800, height: 450 }),
     category: "cuidados",
     species: ["dog"],
     tags: ["perros", "cuidados", "salud"],
@@ -88,7 +90,7 @@ Los gatos son carnívoros estrictos. Su alimento debe tener un alto contenido pr
 ## Socialización
 
 Aunque independientes, los gatos necesitan interacción y afecto diario para mantener su equilibrio emocional.`,
-    heroImageUrl: "https://placehold.co/800x450/2D6A4F/FFFFFF?text=Cuidados+Gatos",
+    heroImageUrl: loremflickr({ tags: blogHeroTags({ category: "cuidados", species: ["cat"] }), seed: "cuidados-esenciales-para-gatos", width: 800, height: 450 }),
     category: "cuidados",
     species: ["cat"],
     tags: ["gatos", "cuidados", "departamento"],
@@ -133,7 +135,7 @@ Las tortugas y lagartijas requieren cuidados especiales:
 - **Humedad adecuada**: varía según la especie.
 
 Siempre consulta con un veterinario especializado en fauna exótica.`,
-    heroImageUrl: "https://placehold.co/800x450/6B3A6B/FFFFFF?text=Mascotas+Exoticas",
+    heroImageUrl: loremflickr({ tags: blogHeroTags({ category: "cuidados", species: ["exotic"] }), seed: "cuidados-mascotas-exoticas", width: 800, height: 450 }),
     category: "cuidados",
     species: ["exotic"],
     tags: ["exóticos", "cuidados", "conejo", "loro"],
@@ -179,7 +181,7 @@ Los perros mayores tienen un metabolismo más lento y pueden desarrollar problem
 - Alimento con menos calorías pero alta biodisponibilidad proteica.
 - Suplementación con glucosamina y condroitina para las articulaciones.
 - Mayor contenido de fibra para la salud digestiva.`,
-    heroImageUrl: "https://placehold.co/800x450/8B4513/FFFFFF?text=Nutricion+Perros",
+    heroImageUrl: loremflickr({ tags: blogHeroTags({ category: "alimentacion", species: ["dog"] }), seed: "nutricion-perro-por-etapa", width: 800, height: 450 }),
     category: "alimentacion",
     species: ["dog"],
     tags: ["nutrición", "perros", "alimentación"],
@@ -219,7 +221,7 @@ Ambos tienen ventajas:
 - Alimentos con maíz, trigo o soja como primer ingrediente.
 - Productos con colorantes, saborizantes artificiales y conservantes BHT/BHA.
 - Dietas caseras sin supervisión veterinaria.`,
-    heroImageUrl: "https://placehold.co/800x450/2C3E50/FFFFFF?text=Nutricion+Gatos",
+    heroImageUrl: loremflickr({ tags: blogHeroTags({ category: "alimentacion", species: ["cat"] }), seed: "alimentacion-gato-carnivoro-estricto", width: 800, height: 450 }),
     category: "alimentacion",
     species: ["cat"],
     tags: ["gatos", "nutrición", "proteína"],
@@ -256,7 +258,7 @@ La curiosidad de nuestras mascotas y nuestra costumbre de compartir la comida pu
 10. **Nueces de macadamia**: causa debilidad muscular y fiebre en perros.
 
 **Ante cualquier ingesta accidental, contacta inmediatamente a tu veterinario.**`,
-    heroImageUrl: "https://placehold.co/800x450/C0392B/FFFFFF?text=Alimentos+Prohibidos",
+    heroImageUrl: loremflickr({ tags: blogHeroTags({ category: "alimentacion", species: ["dog", "cat"] }), seed: "alimentos-prohibidos-mascotas", width: 800, height: 450 }),
     category: "alimentacion",
     species: ["dog", "cat"],
     tags: ["nutrición", "toxicidad", "alimentos prohibidos"],
@@ -298,7 +300,7 @@ Las vacunas son la herramienta más efectiva para prevenir enfermedades graves. 
 - No vacunar a perros enfermos o con fiebre.
 - Esperar 2 semanas después de una desparasitación.
 - Registrar todas las vacunas en el carnet sanitario.`,
-    heroImageUrl: "https://placehold.co/800x450/1A5276/FFFFFF?text=Vacunacion+Perros",
+    heroImageUrl: loremflickr({ tags: blogHeroTags({ category: "salud", species: ["dog"] }), seed: "calendario-vacunacion-perros-chile", width: 800, height: 450 }),
     category: "salud",
     species: ["dog"],
     tags: ["salud", "vacunas", "prevención"],
@@ -342,7 +344,7 @@ Los gatos instintivamente ocultan el dolor y la enfermedad, lo que dificulta det
 - Beber o orinar mucho más de lo normal.
 
 La detección temprana marca la diferencia en el tratamiento y recuperación.`,
-    heroImageUrl: "https://placehold.co/800x450/145A32/FFFFFF?text=Salud+Gatos",
+    heroImageUrl: loremflickr({ tags: blogHeroTags({ category: "salud", species: ["cat"] }), seed: "senales-enfermedad-gato", width: 800, height: 450 }),
     category: "salud",
     species: ["cat"],
     tags: ["salud", "gatos", "veterinario"],
@@ -383,7 +385,7 @@ La línea Senior Consult ahora incluye:
 ## Disponibilidad
 
 Estas nuevas formulaciones ya están disponibles en nuestras sucursales y a través de nuestro catálogo online. Consulta disponibilidad en tu sucursal más cercana.`,
-    heroImageUrl: "https://placehold.co/800x450/8B0000/FFFFFF?text=Novedades+Royal+Canin",
+    heroImageUrl: loremflickr({ tags: blogHeroTags({ category: "novedades", species: ["dog"] }), seed: "nuevas-lineas-royal-canin-2026", width: 800, height: 450 }),
     category: "novedades",
     species: ["dog"],
     tags: ["novedades", "Royal Canin", "nutrición"],
@@ -425,7 +427,7 @@ Durante la primera semana de apertura ofreceremos:
 - Gift bags para las primeras 50 visitas del día.
 
 ¡Seguimos creciendo para estar más cerca de vos y tu mascota!`,
-    heroImageUrl: "https://placehold.co/800x450/17202A/FFFFFF?text=Nueva+Sucursal+Maipu",
+    heroImageUrl: loremflickr({ tags: blogHeroTags({ category: "novedades", species: ["dog", "cat"] }), seed: "nueva-sucursal-maipu", width: 800, height: 450 }),
     category: "novedades",
     species: ["dog", "cat"],
     tags: ["novedades", "sucursal", "Maipú"],

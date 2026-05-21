@@ -185,6 +185,7 @@ export const stores = pgTable("stores", {
   schedule: jsonb("schedule").notNull(),
   services: text("services").array().notNull().default([]),
   reference: text("reference"),
+  imageUrl: text("image_url"),
 });
 
 // ---------------------------------------------------------------------------

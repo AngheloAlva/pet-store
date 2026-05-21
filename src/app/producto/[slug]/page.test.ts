@@ -53,7 +53,7 @@ describe("product page / generateMetadata", () => {
     expect(meta.description).toBeDefined();
     expect(
       (meta.openGraph as { images?: Array<{ url: string }> })?.images?.[0].url,
-    ).toContain("placehold.co");
+    ).toContain("loremflickr.com");
   });
 
   it("returns a fallback title for an unknown slug", async () => {

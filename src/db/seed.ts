@@ -186,6 +186,7 @@ export async function applySeed(db: Db): Promise<void> {
         schedule: s.schedule,
         services: s.services,
         reference: s.reference ?? null,
+        imageUrl: s.imageUrl ?? null,
       })),
     )
     .onConflictDoUpdate({
@@ -201,6 +202,7 @@ export async function applySeed(db: Db): Promise<void> {
         schedule: schema.stores.schedule,
         services: schema.stores.services,
         reference: schema.stores.reference,
+        imageUrl: schema.stores.imageUrl,
       },
     });
 

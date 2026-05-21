@@ -50,6 +50,13 @@
       "when": 1779229840938,
       "tag": "0006_sad_proemial_gods",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1779332267636,
+      "tag": "0007_goofy_colossus",
+      "breakpoints": true
     }
   ]
 }
