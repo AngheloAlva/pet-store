@@ -123,12 +123,13 @@ export function CatalogFilters({
       <FilterGroup title="Mascota">
         <ul className="flex flex-col gap-2">
           {speciesInUse.map((s) => (
-            <CheckboxRow
-              key={s}
-              label={SPECIES_LABELS[s]}
-              checked={especieSel.includes(s)}
-              onChange={() => onToggle("especie", s)}
-            />
+            <li key={s}>
+              <CheckboxRow
+                label={SPECIES_LABELS[s]}
+                checked={especieSel.includes(s)}
+                onChange={() => onToggle("especie", s)}
+              />
+            </li>
           ))}
         </ul>
       </FilterGroup>
@@ -148,12 +149,13 @@ export function CatalogFilters({
               {children.length > 0 && (
                 <ul className="flex flex-col gap-1.5 pl-5">
                   {children.map((child) => (
-                    <CheckboxRow
-                      key={child.id}
-                      label={child.name}
-                      checked={categoriaSel.includes(child.slug)}
-                      onChange={() => onToggle("categoria", child.slug)}
-                    />
+                    <li key={child.id}>
+                      <CheckboxRow
+                        label={child.name}
+                        checked={categoriaSel.includes(child.slug)}
+                        onChange={() => onToggle("categoria", child.slug)}
+                      />
+                    </li>
                   ))}
                 </ul>
               )}
@@ -167,12 +169,13 @@ export function CatalogFilters({
       <FilterGroup title="Marca">
         <ul className="flex flex-col gap-2 max-h-60 overflow-y-auto pr-1">
           {brands.map((b) => (
-            <CheckboxRow
-              key={b.id}
-              label={b.name}
-              checked={marcaSel.includes(b.slug)}
-              onChange={() => onToggle("marca", b.slug)}
-            />
+            <li key={b.id}>
+              <CheckboxRow
+                label={b.name}
+                checked={marcaSel.includes(b.slug)}
+                onChange={() => onToggle("marca", b.slug)}
+              />
+            </li>
           ))}
         </ul>
       </FilterGroup>
@@ -182,12 +185,13 @@ export function CatalogFilters({
       <FilterGroup title="Etiqueta">
         <ul className="flex flex-col gap-2">
           {TAG_FILTER_OPTIONS.map((t) => (
-            <CheckboxRow
-              key={t.value}
-              label={t.label}
-              checked={tagSel.includes(t.value as ProductTag)}
-              onChange={() => onToggle("tag", t.value)}
-            />
+            <li key={t.value}>
+              <CheckboxRow
+                label={t.label}
+                checked={tagSel.includes(t.value as ProductTag)}
+                onChange={() => onToggle("tag", t.value)}
+              />
+            </li>
           ))}
         </ul>
       </FilterGroup>
@@ -244,7 +248,7 @@ function CheckboxRow({
 }) {
   const id = useId();
   return (
-    <li className="flex items-center gap-2">
+    <div className="flex items-center gap-2">
       <Checkbox id={id} checked={checked} onCheckedChange={() => onChange()} />
       <Label
         htmlFor={id}
@@ -252,7 +256,7 @@ function CheckboxRow({
       >
         {label}
       </Label>
-    </li>
+    </div>
   );
 }
 

@@ -8,9 +8,10 @@ import type { Product } from "@/types";
 
 type ProductCardProps = {
   product: Product;
+  priority?: boolean;
 };
 
-export function ProductCard({ product }: ProductCardProps) {
+export function ProductCard({ product, priority = false }: ProductCardProps) {
   const brand = getBrand(product.brandId);
   const minPrice = getMinPrice(product);
   const hasMultipleVariants = product.variants.length > 1;
@@ -30,6 +31,7 @@ export function ProductCard({ product }: ProductCardProps) {
             fill
             sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
             className="object-cover transition-transform duration-300 group-hover:scale-105"
+            priority={priority}
           />
           {tagMeta && (
             <Badge

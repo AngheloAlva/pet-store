@@ -30,6 +30,7 @@ export function CatalogPagination({ page, pageCount, query }: Props) {
         <Button
           variant="outline"
           size="sm"
+          nativeButton={false}
           render={
             <Link
               href={hrefFor(query, page - 1)}
@@ -71,6 +72,7 @@ export function CatalogPagination({ page, pageCount, query }: Props) {
         <Button
           variant="outline"
           size="sm"
+          nativeButton={false}
           render={
             <Link
               href={hrefFor(query, page + 1)}
