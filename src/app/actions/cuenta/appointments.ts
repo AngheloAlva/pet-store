@@ -5,7 +5,7 @@
  * getOwnAppointmentsWithDb: user-scoped query, no bulk-load + JS filter.
  */
 import { db } from "@/db";
-import { appointments, services, stores } from "@/db/schema";
+import { appointments, services, stores, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import type { AppointmentStatus } from "@/db/schema";
 
@@ -14,6 +14,7 @@ type AnyDb = typeof db;
 export type OwnAppointmentRow = {
   id: string;
   userId: string;
+  userName: string;
   petId: string | null;
   petNameSnapshot: string | null;
   serviceId: string;
@@ -35,6 +36,7 @@ export async function getOwnAppointmentsWithDb(
     .select({
       id: appointments.id,
       userId: appointments.userId,
+      userName: users.name,
       petId: appointments.petId,
       petNameSnapshot: appointments.petNameSnapshot,
       serviceId: appointments.serviceId,
@@ -48,6 +50,7 @@ export async function getOwnAppointmentsWithDb(
       cancelReason: appointments.cancelReason,
     })
     .from(appointments)
+    .leftJoin(users, eq(appointments.userId, users.id))
     .leftJoin(services, eq(appointments.serviceId, services.id))
     .leftJoin(stores, eq(appointments.storeId, stores.id))
     .where(eq(appointments.userId, userId));
@@ -55,6 +58,7 @@ export async function getOwnAppointmentsWithDb(
   return rows.map((r) => ({
     id: r.id,
     userId: r.userId,
+    userName: r.userName ?? "",
     petId: r.petId,
     petNameSnapshot: r.petNameSnapshot,
     serviceId: r.serviceId,

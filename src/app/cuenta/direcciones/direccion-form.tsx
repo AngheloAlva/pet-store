@@ -22,11 +22,7 @@ async function createAddressAction(
   return createAddress(input);
 }
 
-interface DireccionFormProps {
-  onSuccess?: () => void;
-}
-
-export function DireccionForm({ onSuccess: _onSuccess }: DireccionFormProps = {}) {
+export function DireccionForm() {
   const [state, formAction, isPending] = useActionState(createAddressAction, null);
 
   const error = state && !state.ok ? state : null;

@@ -3,12 +3,15 @@ import { getCurrentUser } from "@/lib/session";
 import { getOwnAppointmentsWithDb } from "@/app/actions/cuenta/appointments";
 import { db } from "@/db";
 import { CitasClient } from "./citas-client";
+import type { AppointmentAdminRow } from "@/lib/admin/appointments";
 
 export default async function CitasPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const userAppts = await getOwnAppointmentsWithDb(db, user.id);
+  const ownAppts = await getOwnAppointmentsWithDb(db, user.id);
+  // Cast: OwnAppointmentRow is structurally compatible with AppointmentAdminRow
+  const userAppts = ownAppts as unknown as AppointmentAdminRow[];
 
   const now = new Date();
 

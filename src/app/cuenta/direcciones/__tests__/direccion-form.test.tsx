@@ -4,7 +4,7 @@
  * - Submit calls createAddress wrapper (ADDR-2)
  */
 import { vi, describe, it, expect } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: vi.fn() }),
