@@ -2,7 +2,7 @@
  * Mock courier providers (mock_chilexpress, mock_starken) — F3.3
  * Distinct rate tables; tracking number format MOCK-XXXXXXXX.
  */
-import type { Carrier, CartLine } from "./registry";
+import type { Carrier, CartLine, CarrierQuoteArgs } from "./registry";
 
 export const MOCK_ITEM_WEIGHT_GRAMS = 1000;
 
@@ -63,29 +63,23 @@ function generateTrackingNumber(): string {
   return `MOCK-${suffix}`;
 }
 
-export interface MockCourierQuoteArgs {
-  items: CartLine[];
-  commune: string;
-  storeId?: string;
-  orderTotal?: number;
-  regionKey?: RegionKey | string;
-}
-
 function buildCourier(
   id: "mock_chilexpress" | "mock_starken",
   label: string,
   rateTable: Record<string, RateEntry>,
-): Carrier & { quote(args: MockCourierQuoteArgs): Promise<{ cost: number; estimatedDays: number }> } {
+): Carrier {
   return {
     id,
     label,
-    async quote({ items, regionKey = "RM" }) {
+    async quote(args: CarrierQuoteArgs) {
+      const items = args.items as CartLine[];
+      const regionKey = (args.regionKey as string | undefined) ?? "RM";
       const totalWeightGrams = items.reduce(
-        (sum, line) => sum + line.quantity * MOCK_ITEM_WEIGHT_GRAMS,
+        (sum, line) => sum + (line.quantity as number) * MOCK_ITEM_WEIGHT_GRAMS,
         0,
       );
       const totalWeightKg = totalWeightGrams / 1000;
-      const rate = rateTable[regionKey] ?? DEFAULT_REGION_ENTRY;
+      const rate = rateTable[regionKey as string] ?? DEFAULT_REGION_ENTRY;
       const cost = Math.round(rate.baseCost + rate.perKg * totalWeightKg);
       return { cost, estimatedDays: DEFAULT_ESTIMATED_DAYS };
     },

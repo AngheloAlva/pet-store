@@ -14,15 +14,21 @@ export interface CartLine {
   lineTotal: number;
 }
 
+// Extended args — carriers may use a subset; extra fields are ignored
+export interface CarrierQuoteArgs {
+  items: CartLine[];
+  commune: string;
+  storeId?: string;
+  orderTotal?: number;
+  freeShippingThreshold?: number;
+  regionKey?: string;
+  [key: string]: unknown; // allow carrier-specific extensions
+}
+
 export interface Carrier {
   id: CarrierId | string; // allow test carriers with arbitrary ids
   label: string;
-  quote(args: {
-    items: CartLine[];
-    commune: string;
-    storeId?: string;
-    orderTotal?: number;
-  }): Promise<{ cost: number; estimatedDays: number }> | null;
+  quote(args: CarrierQuoteArgs): Promise<{ cost: number; estimatedDays: number }> | null;
   generateTrackingNumber?(): string;
 }
 

@@ -65,8 +65,16 @@ const COVERED_SET = new Set(COVERED_COMMUNES.map((c) => c.toLowerCase()));
 
 /**
  * Returns true if the commune is in the covered delivery area.
+ * When settings.coveredCommunes is provided, use it instead of the hardcoded list.
  * Case-insensitive comparison.
  */
-export function isCovered(commune: string): boolean {
+export function isCovered(
+  commune: string,
+  settings?: { coveredCommunes?: string[] | null },
+): boolean {
+  const list = settings?.coveredCommunes;
+  if (list && list.length > 0) {
+    return list.some((c) => c.toLowerCase() === commune.trim().toLowerCase());
+  }
   return COVERED_SET.has(commune.trim().toLowerCase());
 }

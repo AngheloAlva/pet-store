@@ -14,6 +14,10 @@ type AnyDb = typeof db;
 
 export interface AppSettings {
   paymentFailureMode: boolean;
+  // F3.3 — shipping settings
+  coveredCommunes: string[] | null;
+  freeShippingThreshold: number | null;
+  dispatchSlots: string[] | null;
 }
 
 export type UpdateFailureModeResult =
@@ -29,7 +33,12 @@ export async function getAppSettingsWithDb(database: AnyDb): Promise<AppSettings
       .where(eq(appSettings.id, "singleton"));
 
     if (rows.length > 0) {
-      return { paymentFailureMode: rows[0].paymentFailureMode };
+      return {
+        paymentFailureMode: rows[0].paymentFailureMode,
+        coveredCommunes: rows[0].coveredCommunes ?? null,
+        freeShippingThreshold: rows[0].freeShippingThreshold ?? null,
+        dispatchSlots: rows[0].dispatchSlots ?? null,
+      };
     }
 
     // Insert default singleton (INSERT ... ON CONFLICT DO NOTHING via try/catch)
@@ -48,18 +57,23 @@ export async function getAppSettingsWithDb(database: AnyDb): Promise<AppSettings
       .where(eq(appSettings.id, "singleton"));
 
     if (afterInsert.length > 0) {
-      return { paymentFailureMode: afterInsert[0].paymentFailureMode };
+      return {
+        paymentFailureMode: afterInsert[0].paymentFailureMode,
+        coveredCommunes: afterInsert[0].coveredCommunes ?? null,
+        freeShippingThreshold: afterInsert[0].freeShippingThreshold ?? null,
+        dispatchSlots: afterInsert[0].dispatchSlots ?? null,
+      };
     }
   } catch (err) {
     // Only swallow "table does not exist" — older test DBs without the migration.
     // Real query errors must surface.
     if (err instanceof Error && /relation .* does not exist|no such table/i.test(err.message)) {
-      return { paymentFailureMode: false };
+      return { paymentFailureMode: false, coveredCommunes: null, freeShippingThreshold: null, dispatchSlots: null };
     }
     throw err;
   }
 
-  return { paymentFailureMode: false };
+  return { paymentFailureMode: false, coveredCommunes: null, freeShippingThreshold: null, dispatchSlots: null };
 }
 
 export async function getAppSettings(): Promise<AppSettings> {

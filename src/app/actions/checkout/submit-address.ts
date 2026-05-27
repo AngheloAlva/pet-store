@@ -6,6 +6,7 @@ import { checkoutSessions } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import { submitAddressSchema } from "./submit-address.schema";
 import { isCovered } from "@/lib/checkout/communes";
+import { requiresAddress } from "@/lib/shipping/requires-address";
 
 export type SubmitAddressResult =
   | { ok: true }
@@ -37,8 +38,12 @@ export async function submitAddress(input: unknown): Promise<SubmitAddressResult
 
   if (session.status === "expired") return { ok: false, code: "SESSION_EXPIRED" };
 
-  // Commune coverage
-  if (!isCovered(address.commune)) return { ok: false, code: "COMMUNE_NOT_COVERED" };
+  // Commune coverage — only skipped for explicit pickup deliveryType
+  const deliveryType = (session.deliveryType as "despacho" | "pickup" | "courier" | null) ?? null;
+  const skipCoverageCheck = deliveryType === "pickup";
+  if (!skipCoverageCheck && !isCovered(address.commune)) {
+    return { ok: false, code: "COMMUNE_NOT_COVERED" };
+  }
 
   // Update session
   await db
