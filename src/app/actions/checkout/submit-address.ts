@@ -6,7 +6,6 @@ import { checkoutSessions } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import { submitAddressSchema } from "./submit-address.schema";
 import { isCovered } from "@/lib/checkout/communes";
-import { requiresAddress } from "@/lib/shipping/requires-address";
 
 export type SubmitAddressResult =
   | { ok: true }

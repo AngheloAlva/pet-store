@@ -6,8 +6,6 @@ import type { Carrier, CartLine, CarrierQuoteArgs } from "./registry";
 
 export const MOCK_ITEM_WEIGHT_GRAMS = 1000;
 
-type RegionKey = "RM" | "V" | "VI" | "VII" | "VIII" | "IX" | "X" | "XI" | "XII" | "XIV" | "XV" | "I" | "II" | "III" | "IV";
-
 interface RateEntry {
   baseCost: number; // CLP fixed
   perKg: number;   // CLP per kg

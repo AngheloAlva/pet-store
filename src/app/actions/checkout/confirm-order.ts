@@ -152,7 +152,7 @@ export async function confirmOrderWithDb(
       .set({ status: "completed", updatedAt: new Date() })
       .where(eq(checkoutSessions.id, sessionId));
 
-    // 6. Run all post-payment side effects via finalizeOrder
+    // 6. Run all post-payment side effects via finalizeOrder (includes shipment creation in step 7)
     await finalizeOrder(tx as never, {
       orderId,
       orderNumber: orderNumber!,
@@ -166,6 +166,11 @@ export async function confirmOrderWithDb(
       shippingAddress: (session.address ?? {}) as Record<string, string>,
       paymentMethodLabel: gateway.name,
       pointsEarned,
+      carrier: session.shippingOptionId as import("@/db/schema").CarrierId | null,
+      deliveryType: session.deliveryType as "despacho" | "pickup" | "courier" | null,
+      dispatchSlot: session.dispatchSlot ?? null,
+      pickupStoreId: session.pickupStoreId ?? null,
+      regionKey: null,
     });
   });
 

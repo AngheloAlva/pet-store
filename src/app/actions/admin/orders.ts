@@ -13,6 +13,8 @@ import {
   orderItems,
   transferReceipts,
   users,
+  checkoutSessions,
+  type CarrierId,
 } from "@/db/schema";
 import { desc, eq } from "drizzle-orm";
 import { finalizeOrder, type CartLine } from "@/lib/checkout/finalize-order";
@@ -236,6 +238,19 @@ export async function confirmTransferWithDb(
 
   const customer = customerRows[0] ?? { email: "unknown@test.cl", name: "Unknown" };
 
+  // Load checkout session for delivery fields (F3.3)
+  const sessionRows = await database
+    .select({
+      deliveryType: checkoutSessions.deliveryType,
+      shippingOptionId: checkoutSessions.shippingOptionId,
+      dispatchSlot: checkoutSessions.dispatchSlot,
+      pickupStoreId: checkoutSessions.pickupStoreId,
+    })
+    .from(checkoutSessions)
+    .where(eq(checkoutSessions.id, order.checkoutSessionId));
+
+  const session = sessionRows[0] ?? null;
+
   const cartSnapshot: CartLine[] = items.map((i) => ({
     variantId: i.variantId ?? "",
     productId: i.productId,
@@ -263,7 +278,7 @@ export async function confirmTransferWithDb(
         .set({ pointsEarned, updatedAt: new Date() })
         .where(eq(orders.id, orderId));
 
-      // 4. Run all post-payment side effects
+      // 4. Run all post-payment side effects (including shipment creation in step 7)
       await finalizeOrder(tx as never, {
         orderId: order.id,
         orderNumber: order.orderNumber,
@@ -277,6 +292,11 @@ export async function confirmTransferWithDb(
         shippingAddress: (order.address ?? {}) as Record<string, string>,
         paymentMethodLabel: "Transferencia bancaria (Demo)",
         pointsEarned,
+        carrier: (session?.shippingOptionId ?? order.shippingOptionId) as CarrierId | null,
+        deliveryType: session?.deliveryType as "despacho" | "pickup" | "courier" | null,
+        dispatchSlot: session?.dispatchSlot ?? null,
+        pickupStoreId: session?.pickupStoreId ?? null,
+        regionKey: null,
       });
     });
   } catch (err) {
