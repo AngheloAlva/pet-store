@@ -167,4 +167,37 @@ describe("PersonaSelector", () => {
 
     expect(screen.queryByRole("menuitem", { name: /vista staff/i })).toBeNull();
   });
+
+  // PS-1 — Mi cuenta link
+  it("PS-1: authenticated customer sees 'Mi cuenta' link to /cuenta", async () => {
+    const user = userEvent.setup();
+    render(<PersonaSelector currentUser={mockUser} />);
+
+    await user.click(screen.getByRole("button", { name: /menú de usuario/i }));
+
+    const miCuentaLink = await screen.findByRole("menuitem", { name: /mi cuenta/i });
+    expect(miCuentaLink).toBeInTheDocument();
+    expect(miCuentaLink).toHaveAttribute("href", "/cuenta");
+  });
+
+  it("PS-1: authenticated admin sees 'Mi cuenta' link to /cuenta", async () => {
+    const user = userEvent.setup();
+    render(<PersonaSelector currentUser={mockAdminUser} />);
+
+    await user.click(screen.getByRole("button", { name: /menú de usuario/i }));
+
+    const miCuentaLink = await screen.findByRole("menuitem", { name: /mi cuenta/i });
+    expect(miCuentaLink).toBeInTheDocument();
+    expect(miCuentaLink).toHaveAttribute("href", "/cuenta");
+  });
+
+  it("PS-1: unauthenticated user does NOT see 'Mi cuenta' link", async () => {
+    const user = userEvent.setup();
+    render(<PersonaSelector currentUser={null} />);
+
+    await user.click(screen.getByRole("button", { name: /cambiar persona/i }));
+    await screen.findByText("Camila Rojas");
+
+    expect(screen.queryByRole("menuitem", { name: /mi cuenta/i })).toBeNull();
+  });
 });

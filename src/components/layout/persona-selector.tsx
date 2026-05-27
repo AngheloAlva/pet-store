@@ -50,6 +50,9 @@ export function PersonaSelector({ currentUser }: PersonaSelectorProps) {
         {currentUser ? (
           <DropdownMenuGroup>
             <DropdownMenuLabel>{currentUser.email}</DropdownMenuLabel>
+            <DropdownMenuItem render={<Link href="/cuenta" />}>
+              Mi cuenta
+            </DropdownMenuItem>
             {currentUser.role === "admin" && (
               <DropdownMenuItem render={<Link href="/admin" />}>
                 Panel admin
