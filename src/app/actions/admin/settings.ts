@@ -50,8 +50,13 @@ export async function getAppSettingsWithDb(database: AnyDb): Promise<AppSettings
     if (afterInsert.length > 0) {
       return { paymentFailureMode: afterInsert[0].paymentFailureMode };
     }
-  } catch {
-    // If table doesn't exist yet or any query error, return safe default
+  } catch (err) {
+    // Only swallow "table does not exist" — older test DBs without the migration.
+    // Real query errors must surface.
+    if (err instanceof Error && /relation .* does not exist|no such table/i.test(err.message)) {
+      return { paymentFailureMode: false };
+    }
+    throw err;
   }
 
   return { paymentFailureMode: false };

@@ -21,7 +21,7 @@ export const transferMock: PaymentGateway = {
     return { token: `TRANSFER-${params.orderId}`, redirectUrl: "" };
   },
 
-  async verify(_token: string): Promise<{ approved: boolean; authCode?: string; reason?: string }> {
+  async verify(): Promise<{ approved: boolean; authCode?: string; reason?: string }> {
     throw new Error(
       "transfer_mock.verify must not be called; transfers are confirmed by admin via confirmTransfer",
     );
