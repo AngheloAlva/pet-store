@@ -30,6 +30,21 @@ describe("Gateway registry", () => {
   });
 });
 
+describe("Gateway registry — transfer_mock (Task 2.3)", () => {
+  it("getGateway('transfer_mock') returns object with gatewayId === 'transfer_mock'", async () => {
+    const { getGateway } = await import("@/lib/payments/registry");
+    const gw = getGateway("transfer_mock");
+    expect(gw).toBeDefined();
+    expect(gw.gatewayId).toBe("transfer_mock");
+  });
+
+  it("getAllGateways() returns exactly 3 entries", async () => {
+    const { getAllGateways } = await import("@/lib/payments/registry");
+    const gateways = getAllGateways();
+    expect(gateways).toHaveLength(3);
+  });
+});
+
 describe("Schema — checkoutSessions columns (Task 3.1)", () => {
   it("checkoutSessions table has paymentGateway and paymentMetadata fields", async () => {
     const { checkoutSessions } = await import("@/db/schema");

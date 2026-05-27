@@ -6,11 +6,13 @@
 import type { PaymentGateway } from "./gateway";
 import { webpayMock } from "./webpay-mock";
 import { mercadopagoMock } from "./mercadopago-mock";
+import { transferMock } from "./transfer-mock";
 
 const registry = new Map<string, PaymentGateway>();
 
 registry.set(webpayMock.gatewayId, webpayMock);
 registry.set(mercadopagoMock.gatewayId, mercadopagoMock);
+registry.set(transferMock.gatewayId, transferMock);
 
 export function getGateway(gatewayId: string): PaymentGateway {
   const gateway = registry.get(gatewayId);

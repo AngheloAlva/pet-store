@@ -17,6 +17,11 @@ export const paymentMetadataSchema = z.discriminatedUnion("kind", [
     ]),
     installmentValue: z.number().int().nonnegative(),
   }),
+  z.object({
+    kind: z.literal("transfer"),
+    bankReference: z.string().min(1),
+    receiptId: z.string().min(1),
+  }),
 ]);
 
 export type PaymentMetadata = z.infer<typeof paymentMetadataSchema>;
