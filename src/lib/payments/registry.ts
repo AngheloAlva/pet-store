@@ -1,12 +1,14 @@
 /**
- * Gateway registry — F3.1 / extended in F3.2a
+ * Gateway registry — F3.1 / extended in F3.2a / F3.2b
  * Maps gatewayId → PaymentGateway implementation.
  * Adding a gateway = import + registerGateway() call here.
+ * getGateway() wraps the returned gateway with withFailureMode (D4).
  */
 import type { PaymentGateway } from "./gateway";
 import { webpayMock } from "./webpay-mock";
 import { mercadopagoMock } from "./mercadopago-mock";
 import { transferMock } from "./transfer-mock";
+import { withFailureMode } from "./failure-interceptor";
 
 const registry = new Map<string, PaymentGateway>();
 
@@ -19,7 +21,8 @@ export function getGateway(gatewayId: string): PaymentGateway {
   if (!gateway) {
     throw new Error(`Payment gateway not registered: ${gatewayId}`);
   }
-  return gateway;
+  // Wrap with failure mode interceptor (D4: uniform wrap at lookup time)
+  return withFailureMode(gateway);
 }
 
 export function registerGateway(gateway: PaymentGateway): void {

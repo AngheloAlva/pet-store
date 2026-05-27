@@ -30,6 +30,33 @@ describe("Gateway registry", () => {
   });
 });
 
+describe("Gateway registry — withFailureMode wrapping (Task 5.4)", () => {
+  it("getGateway('webpay_mock').verify is the wrapped function (not the original)", async () => {
+    const { getGateway } = await import("@/lib/payments/registry");
+    const { webpayMock } = await import("@/lib/payments/webpay-mock");
+    const wrapped = getGateway("webpay_mock");
+    // The wrapped verify should be a different function reference than the original
+    expect(wrapped.verify).not.toBe(webpayMock.verify);
+  });
+
+  it("getGateway('transfer_mock').verify still throws (wrapper delegates to stub that throws)", async () => {
+    const { setFailureInterceptorDeps, resetFailureInterceptorDeps } = await import(
+      "@/lib/payments/failure-interceptor"
+    );
+
+    // Disable failure mode so wrapper passes through to the real verify (which throws)
+    setFailureInterceptorDeps({ readFailureMode: async () => false });
+
+    try {
+      const { getGateway } = await import("@/lib/payments/registry");
+      const wrapped = getGateway("transfer_mock");
+      await expect(wrapped.verify("any-token")).rejects.toThrow(/must not be called/);
+    } finally {
+      resetFailureInterceptorDeps();
+    }
+  });
+});
+
 describe("Gateway registry — transfer_mock (Task 2.3)", () => {
   it("getGateway('transfer_mock') returns object with gatewayId === 'transfer_mock'", async () => {
     const { getGateway } = await import("@/lib/payments/registry");
