@@ -1,14 +1,14 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/session";
-import { getAppointments } from "@/lib/admin/appointments";
+import { getOwnAppointmentsWithDb } from "@/app/actions/cuenta/appointments";
+import { db } from "@/db";
 import { CitasClient } from "./citas-client";
 
 export default async function CitasPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const allAppts = await getAppointments({ storeId: undefined });
-  const userAppts = allAppts.filter((a) => a.userId === user.id);
+  const userAppts = await getOwnAppointmentsWithDb(db, user.id);
 
   const now = new Date();
 

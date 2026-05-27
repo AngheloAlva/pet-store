@@ -41,8 +41,21 @@ const pastAppt = {
   status: "attended" as const,
 };
 
-vi.mock("@/lib/admin/appointments", () => ({
-  getAppointments: vi.fn(async () => [upcomingAppt, pastAppt]),
+// Appointment for a different user — should NEVER appear (APPT-1 leak test)
+const otherUserAppt = {
+  ...upcomingAppt,
+  id: "appt-other-user",
+  userId: "user-other-123",
+  serviceName: "Corte especial",
+};
+
+// Mock the new scoped action (post-fix call site)
+vi.mock("@/app/actions/cuenta/appointments", () => ({
+  getOwnAppointmentsWithDb: vi.fn(async (_db: unknown, userId: string) => {
+    // Only return appointments for the requested userId (mirrors DB behavior)
+    const all = [upcomingAppt, pastAppt, otherUserAppt];
+    return all.filter((a) => a.userId === userId);
+  }),
 }));
 
 vi.mock("@/app/actions/appointments", () => ({
@@ -96,5 +109,18 @@ describe("CitasPage", () => {
     const jsx = await CitasPage();
     render(jsx);
     expect(screen.getByRole("button", { name: /cancelar/i })).toBeInTheDocument();
+  });
+
+  // ---------------------------------------------------------------------------
+  // APPT-1 leak test: user B appointments must NOT appear when user A is logged in
+  // ---------------------------------------------------------------------------
+  it("APPT-1: appointments of other users are NOT in query result", async () => {
+    mockGetCurrentUser.mockResolvedValue(camilaUser);
+    const jsx = await CitasPage();
+    render(jsx);
+
+    // The mock filters by userId, so otherUserAppt's service "Corte especial"
+    // should never be rendered
+    expect(screen.queryByText("Corte especial")).not.toBeInTheDocument();
   });
 });
