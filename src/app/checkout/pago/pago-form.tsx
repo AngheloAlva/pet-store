@@ -6,6 +6,7 @@ import { initiatePayment } from "@/app/actions/checkout/initiate-payment";
 import { getAllGateways } from "@/lib/payments/registry";
 import { WebpayMethod } from "./webpay-method";
 import { MercadoPagoMethod } from "./mercadopago-method";
+import { TransferMethod } from "./transfer-method";
 
 interface PagoFormProps {
   sessionId: string;
@@ -67,10 +68,18 @@ export function PagoForm({ sessionId, total }: PagoFormProps) {
             >
               <div
                 className={`w-7 h-7 rounded flex items-center justify-center text-white text-xs font-bold ${
-                  gateway.gatewayId === "webpay_mock" ? "bg-blue-600" : "bg-sky-500"
+                  gateway.gatewayId === "webpay_mock"
+                    ? "bg-blue-600"
+                    : gateway.gatewayId === "mercadopago_mock"
+                    ? "bg-sky-500"
+                    : "bg-emerald-600"
                 }`}
               >
-                {gateway.gatewayId === "webpay_mock" ? "WP" : "MP"}
+                {gateway.gatewayId === "webpay_mock"
+                  ? "WP"
+                  : gateway.gatewayId === "mercadopago_mock"
+                  ? "MP"
+                  : "TR"}
               </div>
               <span className="text-sm font-medium text-gray-900">{gateway.name}</span>
             </button>
@@ -90,6 +99,13 @@ export function PagoForm({ sessionId, total }: PagoFormProps) {
           onPay={handlePay}
           loading={loading}
           error={error}
+        />
+      )}
+      {selectedMethod === "transfer_mock" && (
+        <TransferMethod
+          sessionId={sessionId}
+          bankReference={`REF-${sessionId.slice(0, 8).toUpperCase()}`}
+          amount={total}
         />
       )}
     </div>

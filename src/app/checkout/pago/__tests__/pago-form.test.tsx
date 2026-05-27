@@ -8,9 +8,17 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { useRouter } from "next/navigation";
 
-// Mock the server action
+// Mock server actions and session to prevent env var errors
+vi.mock("@/lib/session", () => ({
+  getCurrentUser: vi.fn(),
+}));
+
 vi.mock("@/app/actions/checkout/initiate-payment", () => ({
   initiatePayment: vi.fn(async () => ({ ok: true, token: "tok-1", redirectUrl: "/checkout/resultado?token=tok-1" })),
+}));
+
+vi.mock("@/app/actions/checkout/submit-transfer-receipt", () => ({
+  submitTransferReceipt: vi.fn(async () => ({ ok: true, orderNumber: "PET-20260101-00001" })),
 }));
 
 describe("PagoForm", () => {
