@@ -9,6 +9,11 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    // Limit parallelism to avoid PGlite wasm memory exhaustion when
+    // many in-memory databases run concurrently. Each PGlite instance
+    // allocates from the same wasm heap; too many concurrent workers
+    // cause timeouts under load.
+    maxWorkers: 4,
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],
