@@ -106,10 +106,10 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
       )}
 
       {/* Re-order stub — "Ver producto" (ORD-3) */}
-      {firstItem && (
+      {firstItem && (firstItem.slug ?? firstItem.productId) && (
         <div className="pt-2">
           <Link
-            href={`/productos/${firstItem.productId}`}
+            href={`/producto/${firstItem.slug ?? firstItem.productId}`}
             className="inline-block border border-primary text-primary px-4 py-2 rounded-md text-sm font-medium hover:bg-primary hover:text-primary-foreground transition-colors"
           >
             Ver producto

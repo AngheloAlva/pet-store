@@ -7,7 +7,7 @@
  */
 import { getCurrentUser } from "@/lib/session";
 import { db } from "@/db";
-import { orders, orderItems, shipments } from "@/db/schema";
+import { orders, orderItems, shipments, products } from "@/db/schema";
 import { desc, eq, and } from "drizzle-orm";
 import { notFound } from "next/navigation";
 
@@ -50,6 +50,7 @@ export interface OrderDetailResult {
     variantId: string | null;
     productId: string;
     sku: string;
+    slug: string | null;
   }>;
   shipment: {
     id: string;
@@ -110,10 +111,21 @@ export async function getUserOrderDetailWithDb(
 
   const order = orderRows[0];
 
-  // Fetch items
+  // Fetch items with product slug (left join to handle orphaned productIds gracefully)
   const items = await database
-    .select()
+    .select({
+      id: orderItems.id,
+      name: orderItems.name,
+      quantity: orderItems.quantity,
+      unitPrice: orderItems.unitPrice,
+      lineTotal: orderItems.lineTotal,
+      variantId: orderItems.variantId,
+      productId: orderItems.productId,
+      sku: orderItems.sku,
+      slug: products.slug,
+    })
     .from(orderItems)
+    .leftJoin(products, eq(orderItems.productId, products.id))
     .where(eq(orderItems.orderId, order.id));
 
   // Fetch shipment (leftJoin equivalent via separate query)
@@ -156,6 +168,7 @@ export async function getUserOrderDetailWithDb(
       variantId: i.variantId,
       productId: i.productId,
       sku: i.sku,
+      slug: i.slug ?? null,
     })),
     shipment,
   };

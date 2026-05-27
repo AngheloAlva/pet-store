@@ -108,18 +108,18 @@ describe("/cuenta/pedidos/[orderNumber] page (ORD-2, ORD-3, ORD-5)", () => {
     expect(screen.getByText("PET-DETAIL-001")).toBeInTheDocument();
   });
 
-  it("renders 'Ver producto' CTA linking to /productos/[slug] of first item (ORD-3)", async () => {
+  it("renders 'Ver producto' CTA linking to /producto/[slug] of first item (ORD-3)", async () => {
     const jsx = await OrderDetailPage({
       params: Promise.resolve({ orderNumber: "PET-DETAIL-001" }),
     });
     render(jsx);
-    // The first item has productId "prod-1"; the page should link to /productos/prod-1
-    // (slug resolution may fall back to productId if slug not in OrderDetailResult type)
+    // The first item has slug "comida-premium-perros"; the page links to /producto/[slug]
+    // (actual product route is /producto/[slug] — singular, not /productos/)
     const ctaLink = screen
       .getAllByRole("link")
       .find((l) => l.textContent?.includes("Ver producto"));
     expect(ctaLink).toBeInTheDocument();
-    expect(ctaLink?.getAttribute("href")).toMatch(/^\/productos\//);
+    expect(ctaLink?.getAttribute("href")).toBe("/producto/comida-premium-perros");
   });
 
   it("does NOT show external tracking link for carrier=pickup", async () => {
