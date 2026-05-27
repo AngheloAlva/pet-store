@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { formatCLP } from "@/lib/format";
 import { computeCartTotals } from "@/lib/cart";
@@ -8,6 +10,41 @@ import { selectItems, useCartStore } from "@/stores/cart";
 export function CartSummary() {
   const items = useCartStore(selectItems);
   const { subtotal, shippingLabel, total } = computeCartTotals(items);
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const hasItems = items.length > 0;
+
+  async function handleCheckout() {
+    if (!hasItems) return;
+    setError(null);
+    setLoading(true);
+
+    const idempotencyKey = crypto.randomUUID();
+    const cartLines = items.map((item) => ({
+      variantId: item.variantId,
+      quantity: item.quantity,
+      clientUnitPrice: item.unitPrice,
+    }));
+
+    // Dynamic import avoids server-only pulling session at component module level
+    const { startCheckoutSession } = await import("@/app/actions/checkout/start-session");
+    const result = await startCheckoutSession({ idempotencyKey, cartLines });
+
+    setLoading(false);
+
+    if (!result.ok) {
+      if (result.code === "UNAUTHENTICATED") {
+        router.push("/login?callbackUrl=/checkout/entrega");
+        return;
+      }
+      setError("No se pudo iniciar el checkout. Por favor intenta nuevamente.");
+      return;
+    }
+
+    router.push("/checkout/entrega");
+  }
 
   return (
     <div className="flex flex-col gap-3">
@@ -27,12 +64,18 @@ export function CartSummary() {
           </dd>
         </div>
       </dl>
-      <div className="flex flex-col gap-1">
-        <Button type="button" size="lg" disabled className="w-full">
-          Ir al checkout
-        </Button>
-        <p className="text-center text-xs text-muted-foreground">Próximamente</p>
-      </div>
+      {error && (
+        <p className="text-center text-xs text-red-600">{error}</p>
+      )}
+      <Button
+        type="button"
+        size="lg"
+        disabled={!hasItems || loading}
+        onClick={handleCheckout}
+        className="w-full"
+      >
+        {loading ? "Iniciando checkout..." : "Ir al checkout"}
+      </Button>
     </div>
   );
 }

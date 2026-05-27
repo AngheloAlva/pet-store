@@ -57,6 +57,20 @@
       "when": 1779332267636,
       "tag": "0007_goofy_colossus",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1748300000000,
+      "tag": "0008_checkout_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1748400000000,
+      "tag": "0009_dte_documents",
+      "breakpoints": true
     }
   ]
 }

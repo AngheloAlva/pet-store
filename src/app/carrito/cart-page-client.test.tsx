@@ -31,6 +31,6 @@ describe("CartPageClient", () => {
     ).toBeInTheDocument();
     // total shown twice (subtotal + total)
     expect(screen.getAllByText(/\$\s*9\.980/).length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByRole("button", { name: /ir al checkout/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /ir al checkout/i })).not.toBeDisabled();
   });
 });

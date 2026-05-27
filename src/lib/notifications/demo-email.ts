@@ -30,6 +30,8 @@ export interface DemoEmailArgs<T extends DemoEmailType> {
   type: T;
   data: TemplateData[T];
   triggeredBy?: string;
+  /** Optional executor — pass the transaction object to participate in an existing tx. */
+  executor?: typeof db;
 }
 
 // ---------------------------------------------------------------------------
@@ -53,7 +55,9 @@ export async function sendDemoEmail<T extends DemoEmailType>(
     console.debug("[demo-email]", { id, type: args.type, to: args.to, subject });
   }
 
-  const [row] = await db
+  const executor = args.executor ?? db;
+
+  const [row] = await executor
     .insert(demoEmails)
     .values({
       id,

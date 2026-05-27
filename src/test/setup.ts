@@ -3,6 +3,29 @@ import { cleanup } from "@testing-library/react";
 import { afterEach, vi } from "vitest";
 
 // ---------------------------------------------------------------------------
+// Global Next.js navigation mock — prevents "invariant: app router must be mounted"
+// Individual test files can override vi.mocked(useRouter) as needed.
+// ---------------------------------------------------------------------------
+vi.mock("next/navigation", () => ({
+  useRouter: vi.fn(() => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    prefetch: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+  })),
+  usePathname: vi.fn(() => "/"),
+  useSearchParams: vi.fn(() => new URLSearchParams()),
+  redirect: vi.fn((path: string) => {
+    throw new Error(`REDIRECT:${path}`);
+  }),
+  notFound: vi.fn(() => {
+    throw new Error("NOT_FOUND");
+  }),
+}));
+
+// ---------------------------------------------------------------------------
 // Global mocks — prevent real DB/network access during tests.
 // ---------------------------------------------------------------------------
 

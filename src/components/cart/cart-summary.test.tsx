@@ -26,12 +26,11 @@ describe("CartSummary", () => {
     expect(screen.getByText(/Se calcula en el checkout/i)).toBeInTheDocument();
   });
 
-  it("renders a disabled checkout button with Próximamente helper text", () => {
+  it("renders an enabled checkout button when cart has items", () => {
     useCartStore.getState().addItem(line, 1);
     render(<CartSummary />);
     const btn = screen.getByRole("button", { name: /ir al checkout/i });
-    expect(btn).toBeDisabled();
-    expect(screen.getByText(/próximamente/i)).toBeInTheDocument();
+    expect(btn).not.toBeDisabled();
   });
 
   it("shows zero totals when cart is empty", () => {

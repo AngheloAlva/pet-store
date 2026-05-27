@@ -17,6 +17,7 @@ import { render as renderRestockAlert } from "./restock-alert";
 import { render as renderWelcome } from "./welcome";
 import { render as renderPointsAdjustment } from "./points-adjustment";
 import { render as renderOther } from "./other";
+import { render as renderOrderConfirmation } from "./order-confirmation";
 
 import type { Data as AppointmentConfirmationData } from "./appointment-confirmation";
 import type { Data as AppointmentCanceledData } from "./appointment-canceled";
@@ -27,6 +28,7 @@ import type { Data as RestockAlertData } from "./restock-alert";
 import type { Data as WelcomeData } from "./welcome";
 import type { Data as PointsAdjustmentData } from "./points-adjustment";
 import type { Data as OtherData } from "./other";
+import type { Data as OrderConfirmationData } from "./order-confirmation";
 
 export interface RenderedEmail {
   subject: string;
@@ -43,6 +45,7 @@ export type TemplateData = {
   restock_alert: RestockAlertData;
   welcome: WelcomeData;
   points_adjustment: PointsAdjustmentData;
+  order_confirmation: OrderConfirmationData;
   other: OtherData;
 };
 
@@ -55,5 +58,6 @@ export const TEMPLATES: { [K in DemoEmailType]: (data: TemplateData[K]) => Rende
   restock_alert: renderRestockAlert,
   welcome: renderWelcome,
   points_adjustment: renderPointsAdjustment,
+  order_confirmation: renderOrderConfirmation,
   other: renderOther,
 };

@@ -419,6 +419,7 @@ export const DEMO_EMAIL_TYPE = [
   "restock_alert",
   "welcome",
   "points_adjustment",
+  "order_confirmation",
   "other",
 ] as const;
 
@@ -442,6 +443,138 @@ export const demoEmails = pgTable(
     index("idx_demo_emails_created_at").on(t.createdAt),
     index("idx_demo_emails_type_created_at").on(t.type, t.createdAt),
     index("idx_demo_emails_to_user_created_at").on(t.toUserId, t.createdAt),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// checkout_sessions
+// ---------------------------------------------------------------------------
+export const CHECKOUT_SESSION_STATUS = ["active", "payment_pending", "completed", "expired"] as const;
+export type CheckoutSessionStatus = (typeof CHECKOUT_SESSION_STATUS)[number];
+
+export const checkoutSessions = pgTable(
+  "checkout_sessions",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id),
+    idempotencyKey: text("idempotency_key").notNull().unique(),
+    cartSnapshot: jsonb("cart_snapshot").notNull(),
+    address: jsonb("address"),
+    shippingOptionId: text("shipping_option_id"),
+    shippingCost: integer("shipping_cost"),
+    status: text("status").notNull().default("active"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("idx_checkout_sessions_user_expires_at").on(t.userId, t.expiresAt),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// orders
+// ---------------------------------------------------------------------------
+export const ORDER_STATUS = ["pending", "confirmed", "cancelled", "refunded"] as const;
+export type OrderStatus = (typeof ORDER_STATUS)[number];
+
+export const ORDER_PAYMENT_STATUS = ["unpaid", "paid", "failed", "refunded"] as const;
+export type OrderPaymentStatus = (typeof ORDER_PAYMENT_STATUS)[number];
+
+export const orders = pgTable(
+  "orders",
+  {
+    id: text("id").primaryKey(),
+    orderNumber: text("order_number").notNull().unique(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id),
+    checkoutSessionId: text("checkout_session_id")
+      .notNull()
+      .references(() => checkoutSessions.id),
+    status: text("status").notNull().default("pending"),
+    paymentStatus: text("payment_status").notNull().default("unpaid"),
+    paymentGateway: text("payment_gateway").notNull(),
+    gatewayToken: text("gateway_token"),
+    address: jsonb("address").notNull(),
+    shippingOptionId: text("shipping_option_id").notNull(),
+    shippingCost: integer("shipping_cost").notNull(),
+    subtotal: integer("subtotal").notNull(),
+    discountTotal: integer("discount_total").notNull().default(0),
+    walletDiscount: integer("wallet_discount").notNull().default(0),
+    total: integer("total").notNull(),
+    couponCode: text("coupon_code"),
+    pointsRedeemed: integer("points_redeemed").notNull().default(0),
+    pointsEarned: integer("points_earned").notNull().default(0),
+    salespersonId: text("salesperson_id"),
+    priceListId: text("price_list_id"),
+    dteId: text("dte_id"),
+    creditDueDate: text("credit_due_date"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("idx_orders_user_created_at").on(t.userId, t.createdAt),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// order_items
+// ---------------------------------------------------------------------------
+export const orderItems = pgTable(
+  "order_items",
+  {
+    id: text("id").primaryKey(),
+    orderId: text("order_id")
+      .notNull()
+      .references(() => orders.id),
+    productId: text("product_id").notNull(),
+    variantId: text("variant_id"),
+    sku: text("sku").notNull(),
+    name: text("name").notNull(),
+    quantity: integer("quantity").notNull(),
+    unitPrice: integer("unit_price").notNull(),
+    lineTotal: integer("line_total").notNull(),
+  },
+  (t) => [
+    index("idx_order_items_order_id").on(t.orderId),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// order_sequences
+// ---------------------------------------------------------------------------
+export const orderSequences = pgTable("order_sequences", {
+  date: text("date").primaryKey(),
+  lastSeq: integer("last_seq").notNull().default(0),
+});
+
+// ---------------------------------------------------------------------------
+// dte_documents
+// ---------------------------------------------------------------------------
+export const DTE_STATUS = ["por_emitir", "emitido", "anulado", "rechazado"] as const;
+export type DteStatus = (typeof DTE_STATUS)[number];
+
+export const dteDocuments = pgTable(
+  "dte_documents",
+  {
+    id: text("id").primaryKey(),
+    orderId: text("order_id")
+      .notNull()
+      .references(() => orders.id),
+    dteId: text("dte_id").notNull(),
+    status: text("status").notNull().default("por_emitir"),
+    folio: text("folio"),
+    type: text("type"),
+    issuedAt: timestamp("issued_at", { withTimezone: true }),
+    pdfUrl: text("pdf_url"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("idx_dte_documents_order_id").on(t.orderId),
   ],
 );
 

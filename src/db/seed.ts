@@ -404,4 +404,11 @@ export async function applySeed(db: Db): Promise<void> {
       .values(seedBlogPostProducts)
       .onConflictDoNothing();
   }
+
+  // --- order_sequences: seed row for current year (idempotent) ---
+  const currentDate = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+  await db
+    .insert(schema.orderSequences)
+    .values({ date: currentDate, lastSeq: 0 })
+    .onConflictDoNothing();
 }
