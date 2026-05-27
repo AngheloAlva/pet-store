@@ -45,8 +45,10 @@ export function isVariantGloballyOutOfStock(variantId: string): boolean {
 }
 
 export function getVariantTotalStock(variantId: string): number {
-  return getProductStockMatrix(variantId).reduce(
-    (acc, row) => acc + STATUS_TO_UNITS[row.status],
-    0,
-  );
+  const matrix = getProductStockMatrix(variantId);
+  // Client-side bundle: module-level sync cache is never populated (initSyncCache
+  // runs in RSC only). Fall back to a safe in_stock default so the cart accepts
+  // the item; confirmOrder validates real stock server-side at checkout.
+  if (matrix.length === 0) return STATUS_TO_UNITS.in_stock;
+  return matrix.reduce((acc, row) => acc + STATUS_TO_UNITS[row.status], 0);
 }

@@ -141,4 +141,14 @@ describe("getVariantTotalStock (sync)", () => {
     );
     expect(getVariantTotalStock("synthetic-oos")).toBe(0);
   });
+
+  it("falls back to in_stock units when client-side cache is empty", () => {
+    // Simulate client bundle: module-level sync cache never populated by RSC.
+    // Both stockLevels AND stores caches are empty.
+    setStockLevels([]);
+    vi.mocked(syncCacheMock.getCachedStores).mockReturnValue([]);
+    // 99 = STATUS_TO_UNITS.in_stock — server-side stock validation at confirmOrder
+    // is the real gate; this fallback only prevents the cart from refusing items.
+    expect(getVariantTotalStock("any-variant")).toBe(99);
+  });
 });
