@@ -18,6 +18,9 @@ import { render as renderWelcome } from "./welcome";
 import { render as renderPointsAdjustment } from "./points-adjustment";
 import { render as renderOther } from "./other";
 import { render as renderOrderConfirmation } from "./order-confirmation";
+import { render as renderShipmentDispatched } from "./shipment-dispatched";
+import { render as renderShipmentDelivered } from "./shipment-delivered";
+import { render as renderPickupReady } from "./pickup-ready";
 
 import type { Data as AppointmentConfirmationData } from "./appointment-confirmation";
 import type { Data as AppointmentCanceledData } from "./appointment-canceled";
@@ -29,6 +32,9 @@ import type { Data as WelcomeData } from "./welcome";
 import type { Data as PointsAdjustmentData } from "./points-adjustment";
 import type { Data as OtherData } from "./other";
 import type { Data as OrderConfirmationData } from "./order-confirmation";
+import type { Data as ShipmentDispatchedData } from "./shipment-dispatched";
+import type { Data as ShipmentDeliveredData } from "./shipment-delivered";
+import type { Data as PickupReadyData } from "./pickup-ready";
 
 export interface RenderedEmail {
   subject: string;
@@ -46,6 +52,9 @@ export type TemplateData = {
   welcome: WelcomeData;
   points_adjustment: PointsAdjustmentData;
   order_confirmation: OrderConfirmationData;
+  shipment_dispatched: ShipmentDispatchedData;
+  shipment_delivered: ShipmentDeliveredData;
+  pickup_ready: PickupReadyData;
   other: OtherData;
 };
 
@@ -59,5 +68,8 @@ export const TEMPLATES: { [K in DemoEmailType]: (data: TemplateData[K]) => Rende
   welcome: renderWelcome,
   points_adjustment: renderPointsAdjustment,
   order_confirmation: renderOrderConfirmation,
+  shipment_dispatched: renderShipmentDispatched,
+  shipment_delivered: renderShipmentDelivered,
+  pickup_ready: renderPickupReady,
   other: renderOther,
 };

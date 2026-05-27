@@ -420,6 +420,9 @@ export const DEMO_EMAIL_TYPE = [
   "welcome",
   "points_adjustment",
   "order_confirmation",
+  "shipment_dispatched",
+  "shipment_delivered",
+  "pickup_ready",
   "other",
 ] as const;
 
@@ -452,6 +455,9 @@ export const demoEmails = pgTable(
 export const CHECKOUT_SESSION_STATUS = ["active", "payment_pending", "completed", "expired"] as const;
 export type CheckoutSessionStatus = (typeof CHECKOUT_SESSION_STATUS)[number];
 
+export const DELIVERY_TYPE = ["despacho", "pickup", "courier"] as const;
+export type DeliveryType = (typeof DELIVERY_TYPE)[number];
+
 export const checkoutSessions = pgTable(
   "checkout_sessions",
   {
@@ -467,6 +473,10 @@ export const checkoutSessions = pgTable(
     status: text("status").notNull().default("active"),
     paymentGateway: text("payment_gateway"),
     paymentMetadata: jsonb("payment_metadata"),
+    // F3.3 — shipping fields
+    deliveryType: text("delivery_type"),
+    pickupStoreId: text("pickup_store_id").references(() => stores.id),
+    dispatchSlot: text("dispatch_slot"),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -633,8 +643,61 @@ export const blogPostProducts = pgTable(
 export const appSettings = pgTable("app_settings", {
   id: text("id").primaryKey().default("singleton"),
   paymentFailureMode: boolean("payment_failure_mode").notNull().default(false),
+  // F3.3 — shipping settings
+  coveredCommunes: text("covered_communes").array(),
+  freeShippingThreshold: integer("free_shipping_threshold"),
+  dispatchSlots: text("dispatch_slots").array(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+// ---------------------------------------------------------------------------
+// shipments (F3.3)
+// ---------------------------------------------------------------------------
+export const CARRIER_ID = ["propio", "mock_chilexpress", "mock_starken", "pickup"] as const;
+export type CarrierId = (typeof CARRIER_ID)[number];
+
+export const SHIPMENT_STATUS = ["preparando", "en_ruta", "entregado", "fallido", "listo"] as const;
+export type ShipmentStatus = (typeof SHIPMENT_STATUS)[number];
+
+export const shipments = pgTable(
+  "shipments",
+  {
+    id: text("id").primaryKey(),
+    orderId: text("order_id")
+      .notNull()
+      .unique()
+      .references(() => orders.id),
+    carrier: text("carrier").notNull(),
+    status: text("status").notNull().default("preparando"),
+    trackingNumber: text("tracking_number"),
+    metadata: jsonb("metadata").notNull().default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("idx_shipments_order_id").on(t.orderId),
+    index("idx_shipments_tracking_number").on(t.trackingNumber),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// tracking_events (F3.3)
+// ---------------------------------------------------------------------------
+export const trackingEvents = pgTable(
+  "tracking_events",
+  {
+    id: text("id").primaryKey(),
+    shipmentId: text("shipment_id")
+      .notNull()
+      .references(() => shipments.id),
+    status: text("status").notNull(),
+    description: text("description").notNull(),
+    timestamp: timestamp("timestamp", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("idx_tracking_events_shipment_id").on(t.shipmentId),
+  ],
+);
 
 // ---------------------------------------------------------------------------
 // transfer_receipts (F3.2b — stores base64 receipt images for bank transfers)
@@ -845,5 +908,20 @@ export const transferReceiptsRelations = relations(transferReceipts, ({ one }) =
   order: one(orders, {
     fields: [transferReceipts.orderId],
     references: [orders.id],
+  }),
+}));
+
+export const shipmentsRelations = relations(shipments, ({ one, many }) => ({
+  order: one(orders, {
+    fields: [shipments.orderId],
+    references: [orders.id],
+  }),
+  trackingEvents: many(trackingEvents),
+}));
+
+export const trackingEventsRelations = relations(trackingEvents, ({ one }) => ({
+  shipment: one(shipments, {
+    fields: [trackingEvents.shipmentId],
+    references: [shipments.id],
   }),
 }));
