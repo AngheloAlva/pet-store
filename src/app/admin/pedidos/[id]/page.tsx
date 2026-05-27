@@ -1,10 +1,11 @@
 /**
- * /admin/pedidos/[id] — F3.2b
- * RSC page: shows order detail + receipt image + confirm button (if pending_verification).
+ * /admin/pedidos/[id] — F3.2b + F3.3
+ * RSC page: shows order detail + receipt + confirm button + shipment panel.
  */
 import { notFound } from "next/navigation";
-import { getOrderDetail } from "@/app/actions/admin/orders";
+import { getOrderDetail, getOrderShipment } from "@/app/actions/admin/orders";
 import { ConfirmTransferButton } from "./confirm-transfer-button";
+import { ShipmentPanel } from "@/components/admin/shipment-panel";
 
 interface AdminPedidoDetailPageProps {
   params: Promise<{ id: string }>;
@@ -12,7 +13,10 @@ interface AdminPedidoDetailPageProps {
 
 export default async function AdminPedidoDetailPage({ params }: AdminPedidoDetailPageProps) {
   const { id } = await params;
-  const data = await getOrderDetail(id);
+  const [data, shipmentDetail] = await Promise.all([
+    getOrderDetail(id),
+    getOrderShipment(id),
+  ]);
 
   if (!data) notFound();
 
@@ -65,6 +69,20 @@ export default async function AdminPedidoDetailPage({ params }: AdminPedidoDetai
           ))}
         </div>
       </div>
+
+      {/* Shipment panel (F3.3) */}
+      {shipmentDetail && (
+        <ShipmentPanel
+          shipment={{
+            id: shipmentDetail.id,
+            orderId: shipmentDetail.orderId,
+            carrier: shipmentDetail.carrier,
+            status: shipmentDetail.status,
+            trackingNumber: shipmentDetail.trackingNumber,
+          }}
+          events={shipmentDetail.events}
+        />
+      )}
 
       {/* Transfer receipt (only for pending_verification) */}
       {order.paymentStatus === "pending_verification" && receipt && (

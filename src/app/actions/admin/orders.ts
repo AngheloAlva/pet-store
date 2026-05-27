@@ -14,7 +14,10 @@ import {
   transferReceipts,
   users,
   checkoutSessions,
+  shipments,
+  trackingEvents,
   type CarrierId,
+  type ShipmentStatus,
 } from "@/db/schema";
 import { desc, eq } from "drizzle-orm";
 import { finalizeOrder, type CartLine } from "@/lib/checkout/finalize-order";
@@ -308,6 +311,69 @@ export async function confirmTransferWithDb(
   }
 
   return { ok: true, orderNumber: order.orderNumber };
+}
+
+// ---------------------------------------------------------------------------
+// getOrderShipment — returns shipment + events for an order (F3.3)
+// ---------------------------------------------------------------------------
+
+export interface ShipmentDetail {
+  id: string;
+  orderId: string;
+  carrier: CarrierId;
+  status: ShipmentStatus;
+  trackingNumber: string | null;
+  events: Array<{
+    id: string;
+    shipmentId: string;
+    status: ShipmentStatus;
+    description: string;
+    timestamp: Date;
+  }>;
+}
+
+export async function getOrderShipmentWithDb(
+  database: AnyDb,
+  orderId: string,
+): Promise<ShipmentDetail | null> {
+  const shipmentRows = await database
+    .select()
+    .from(shipments)
+    .where(eq(shipments.orderId, orderId));
+
+  if (shipmentRows.length === 0) return null;
+
+  const shipment = shipmentRows[0];
+
+  const events = await database
+    .select()
+    .from(trackingEvents)
+    .where(eq(trackingEvents.shipmentId, shipment.id));
+
+  // Sort ascending by timestamp
+  events.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+
+  return {
+    id: shipment.id,
+    orderId: shipment.orderId,
+    carrier: shipment.carrier as CarrierId,
+    status: shipment.status as ShipmentStatus,
+    trackingNumber: shipment.trackingNumber,
+    events: events.map((e) => ({
+      id: e.id,
+      shipmentId: e.shipmentId,
+      status: e.status as ShipmentStatus,
+      description: e.description,
+      timestamp: e.timestamp,
+    })),
+  };
+}
+
+export async function getOrderShipment(orderId: string): Promise<ShipmentDetail | null> {
+  const user = await getCurrentUser();
+  if (!user || user.role !== "admin") return null;
+
+  return getOrderShipmentWithDb(db, orderId);
 }
 
 export async function confirmTransfer(orderId: string): Promise<ConfirmTransferResult> {

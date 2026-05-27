@@ -1,10 +1,15 @@
 /**
- * /admin/configuracion — F3.2b
- * RSC page: reads current appSettings and renders the FailureModeToggle.
+ * /admin/configuracion — F3.2b + F3.3
+ * RSC page: reads current appSettings, renders FailureModeToggle and CoberturaSettings.
  * Admin layout guard handles authentication.
  */
 import { getAppSettings } from "@/app/actions/admin/settings";
 import { FailureModeToggle } from "./failure-mode-toggle";
+import { CoberturaSettings } from "@/components/admin/cobertura-settings";
+
+const DEFAULT_COMMUNES = ["Providencia", "Las Condes", "Ñuñoa", "Santiago", "Vitacura"];
+const DEFAULT_SLOTS = ["manana", "tarde"];
+const DEFAULT_THRESHOLD = 20000;
 
 export default async function AdminConfiguracionPage() {
   const settings = await getAppSettings();
@@ -30,6 +35,13 @@ export default async function AdminConfiguracionPage() {
 
         <FailureModeToggle initial={settings.paymentFailureMode} />
       </div>
+
+      {/* Cobertura settings (F3.3) */}
+      <CoberturaSettings
+        initialCommunes={settings.coveredCommunes ?? DEFAULT_COMMUNES}
+        initialThreshold={settings.freeShippingThreshold ?? DEFAULT_THRESHOLD}
+        initialSlots={settings.dispatchSlots ?? DEFAULT_SLOTS}
+      />
     </div>
   );
 }

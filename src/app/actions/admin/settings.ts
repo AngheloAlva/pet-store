@@ -114,3 +114,74 @@ export async function updateFailureMode(enabled: boolean): Promise<UpdateFailure
 
   return updateFailureModeWithDb(db, enabled, user.id);
 }
+
+// ---------------------------------------------------------------------------
+// Cobertura settings (F3.3)
+// ---------------------------------------------------------------------------
+
+export interface CoberturaSettingsInput {
+  coveredCommunes: string[];
+  freeShippingThreshold: number;
+  dispatchSlots: string[];
+}
+
+export type UpdateCoberturaResult =
+  | { ok: true }
+  | { ok: false; code: "UNAUTHENTICATED" | "FORBIDDEN" | "VALIDATION_ERROR"; message?: string };
+
+export async function updateCoberturaSettingsWithDb(
+  database: AnyDb,
+  userId: string,
+  input: CoberturaSettingsInput,
+): Promise<UpdateCoberturaResult> {
+  // Check admin role
+  const { users } = await import("@/db/schema");
+  const userRows = await database
+    .select({ role: users.role })
+    .from(users)
+    .where(eq(users.id, userId));
+
+  if (userRows.length === 0 || userRows[0].role !== "admin") {
+    return { ok: false, code: "FORBIDDEN" };
+  }
+
+  // Validate threshold
+  if (input.freeShippingThreshold <= 0) {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      message: "freeShippingThreshold must be a positive number",
+    };
+  }
+
+  await database
+    .insert(appSettings)
+    .values({
+      id: "singleton",
+      paymentFailureMode: false,
+      coveredCommunes: input.coveredCommunes,
+      freeShippingThreshold: input.freeShippingThreshold,
+      dispatchSlots: input.dispatchSlots,
+    })
+    .onConflictDoUpdate({
+      target: appSettings.id,
+      set: {
+        coveredCommunes: input.coveredCommunes,
+        freeShippingThreshold: input.freeShippingThreshold,
+        dispatchSlots: input.dispatchSlots,
+        updatedAt: new Date(),
+      },
+    });
+
+  return { ok: true };
+}
+
+export async function updateCoberturaSettings(
+  input: CoberturaSettingsInput,
+): Promise<UpdateCoberturaResult> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, code: "UNAUTHENTICATED" };
+  if (user.role !== "admin") return { ok: false, code: "FORBIDDEN" };
+
+  return updateCoberturaSettingsWithDb(db, user.id, input);
+}
