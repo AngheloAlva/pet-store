@@ -784,6 +784,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   appointments: many(appointments),
   pets: many(pets),
   pointsTransactions: many(pointsTransactions),
+  addresses: many(userAddresses),
 }));
 
 export const petsRelations = relations(pets, ({ one }) => ({
@@ -925,3 +926,38 @@ export const trackingEventsRelations = relations(trackingEvents, ({ one }) => ({
     references: [shipments.id],
   }),
 }));
+
+// ---------------------------------------------------------------------------
+// user_addresses (F3.4)
+// ---------------------------------------------------------------------------
+export const userAddresses = pgTable(
+  "user_addresses",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    label: text("label").notNull(),
+    name: text("name").notNull(),
+    street: text("street").notNull(),
+    commune: text("commune").notNull(),
+    region: text("region").notNull(),
+    phone: text("phone").notNull(),
+    notes: text("notes"),
+    isDefault: boolean("is_default").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_user_addresses_user_id").on(t.userId)],
+);
+
+export type UserAddress = typeof userAddresses.$inferSelect;
+export type NewUserAddress = typeof userAddresses.$inferInsert;
+
+export const userAddressesRelations = relations(userAddresses, ({ one }) => ({
+  user: one(users, {
+    fields: [userAddresses.userId],
+    references: [users.id],
+  }),
+}));
+
