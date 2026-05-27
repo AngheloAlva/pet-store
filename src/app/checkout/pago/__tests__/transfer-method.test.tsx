@@ -28,7 +28,7 @@ describe("TransferMethod component", () => {
       onload: ((event: unknown) => void) | null = null;
       onerror: ((event: unknown) => void) | null = null;
 
-      readAsDataURL = readAsDataURLSpy.mockImplementation((file: File) => {
+      readAsDataURL = readAsDataURLSpy.mockImplementation((_file: File) => {
         // Simulate async load
         setTimeout(() => {
           this.result = "data:image/png;base64,abc123";

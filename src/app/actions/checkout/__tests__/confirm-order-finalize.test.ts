@@ -118,10 +118,8 @@ async function seedBase(db: TestDb) {
 }
 
 describe("confirmOrder regression — finalizeOrder delegation (Task 1.2)", () => {
-  let finalizeSpy: ReturnType<typeof vi.fn>;
-
   beforeEach(() => {
-    finalizeSpy = vi.fn();
+    // finalizeSpy reserved for future spy assertions
   });
 
   afterEach(() => {

@@ -22,29 +22,36 @@ export type UpdateFailureModeResult =
 
 export async function getAppSettingsWithDb(database: AnyDb): Promise<AppSettings> {
   // Try to get existing singleton
-  const rows = await database
-    .select()
-    .from(appSettings)
-    .where(eq(appSettings.id, "singleton"));
+  try {
+    const rows = await database
+      .select()
+      .from(appSettings)
+      .where(eq(appSettings.id, "singleton"));
 
-  if (rows.length > 0) {
-    return { paymentFailureMode: rows[0].paymentFailureMode };
-  }
+    if (rows.length > 0) {
+      return { paymentFailureMode: rows[0].paymentFailureMode };
+    }
 
-  // Upsert singleton with defaults
-  await database
-    .insert(appSettings)
-    .values({ id: "singleton", paymentFailureMode: false })
-    .onConflictDoNothing();
+    // Insert default singleton (INSERT ... ON CONFLICT DO NOTHING via try/catch)
+    try {
+      await database
+        .insert(appSettings)
+        .values({ id: "singleton", paymentFailureMode: false });
+    } catch {
+      // Row already exists — concurrent insert, just re-read
+    }
 
-  // Re-fetch after upsert
-  const afterUpsert = await database
-    .select()
-    .from(appSettings)
-    .where(eq(appSettings.id, "singleton"));
+    // Re-fetch after insert
+    const afterInsert = await database
+      .select()
+      .from(appSettings)
+      .where(eq(appSettings.id, "singleton"));
 
-  if (afterUpsert.length > 0) {
-    return { paymentFailureMode: afterUpsert[0].paymentFailureMode };
+    if (afterInsert.length > 0) {
+      return { paymentFailureMode: afterInsert[0].paymentFailureMode };
+    }
+  } catch {
+    // If table doesn't exist yet or any query error, return safe default
   }
 
   return { paymentFailureMode: false };
