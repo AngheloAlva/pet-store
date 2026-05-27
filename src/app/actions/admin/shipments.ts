@@ -1,15 +1,17 @@
 "use server";
 
 /**
- * Admin shipments actions — F3.3 Phase 6
- * advanceShipmentStatus: validates transition, inserts tracking_events row, updates shipments.status.
+ * Admin shipments actions — F3.3 Phase 6 + Phase 8
+ * advanceShipmentStatus: validates transition, inserts tracking_events row,
+ * updates shipments.status, sends demo email on key transitions.
  */
 import { getCurrentUser } from "@/lib/session";
 import { db } from "@/db";
-import { shipments, trackingEvents, users, type CarrierId, type ShipmentStatus } from "@/db/schema";
+import { shipments, trackingEvents, users, orders, type CarrierId, type ShipmentStatus } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { canTransition } from "@/lib/shipping/transitions";
 import { revalidatePath } from "next/cache";
+import { sendDemoEmail } from "@/lib/notifications/demo-email";
 
 type AnyDb = typeof db;
 
@@ -32,6 +34,88 @@ const STATUS_DESCRIPTIONS: Record<ShipmentStatus, string> = {
   fallido: "Entrega fallida",
   listo: "Pedido listo para retiro",
 };
+
+// ---------------------------------------------------------------------------
+// Internal helper: send demo email for key shipment status transitions
+// ---------------------------------------------------------------------------
+
+async function sendShipmentNotification(
+  database: AnyDb,
+  shipmentId: string,
+  _carrier: CarrierId,
+  newStatus: ShipmentStatus,
+  carrierActual: CarrierId,
+): Promise<void> {
+  // Load order + customer via join
+  const rows = await database
+    .select({
+      orderNumber: orders.orderNumber,
+      userId: orders.userId,
+      userEmail: users.email,
+      userName: users.name,
+    })
+    .from(shipments)
+    .innerJoin(orders, eq(orders.id, shipments.orderId))
+    .innerJoin(users, eq(users.id, orders.userId))
+    .where(eq(shipments.id, shipmentId));
+
+  if (rows.length === 0) return; // Cannot send without customer info
+
+  const { orderNumber, userId, userEmail, userName } = rows[0];
+
+  try {
+    if (newStatus === "en_ruta") {
+      const row = await database
+        .select({ trackingNumber: shipments.trackingNumber })
+        .from(shipments)
+        .where(eq(shipments.id, shipmentId));
+
+      const trackingNumber = row[0]?.trackingNumber ?? "—";
+
+      const carrierLabels: Record<CarrierId, string> = {
+        propio: "Despacho propio",
+        mock_chilexpress: "Chilexpress (demo)",
+        mock_starken: "Starken (demo)",
+        pickup: "Retiro en tienda",
+      };
+
+      await sendDemoEmail({
+        to: userEmail,
+        toUserId: userId,
+        type: "shipment_dispatched",
+        data: {
+          orderNumber,
+          customerName: userName,
+          trackingNumber,
+          carrier: carrierLabels[carrierActual] ?? carrierActual,
+        },
+        executor: database as typeof import("@/db").db,
+      });
+    } else if (newStatus === "entregado") {
+      await sendDemoEmail({
+        to: userEmail,
+        toUserId: userId,
+        type: "shipment_delivered",
+        data: { orderNumber, customerName: userName },
+        executor: database as typeof import("@/db").db,
+      });
+    } else if (newStatus === "listo") {
+      await sendDemoEmail({
+        to: userEmail,
+        toUserId: userId,
+        type: "pickup_ready",
+        data: {
+          orderNumber,
+          customerName: userName,
+          storeName: "Tienda",
+        },
+        executor: database as typeof import("@/db").db,
+      });
+    }
+  } catch {
+    // Demo email failures must not block the status transition
+  }
+}
 
 export async function advanceShipmentStatusWithDb(
   database: AnyDb,
@@ -84,6 +168,9 @@ export async function advanceShipmentStatusWithDb(
     status: nextStatus,
     description: STATUS_DESCRIPTIONS[nextStatus] ?? nextStatus,
   });
+
+  // Send demo email for key transitions (Phase 8)
+  await sendShipmentNotification(database, shipmentId, carrier, nextStatus, carrier);
 
   return { ok: true, newStatus: nextStatus };
 }
