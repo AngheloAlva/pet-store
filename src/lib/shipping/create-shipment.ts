@@ -4,11 +4,21 @@
  * Called as step 7 of finalizeOrder.
  */
 import { eq } from "drizzle-orm";
+import { z } from "zod";
 import { db } from "@/db";
 import { shipments, trackingEvents } from "@/db/schema";
+import { CARRIER_IDS } from "./types";
 import type { CarrierId, ShipmentMetadata } from "./types";
 
 type AnyDb = typeof db;
+
+/** Zod schema that enforces the carrier boundary before any DB write (SH-2a). */
+export const createShipmentContextSchema = z.object({
+  orderId: z.string().min(1),
+  carrier: z.enum(CARRIER_IDS),
+  metadata: z.record(z.string(), z.unknown()),
+  trackingNumber: z.string().optional(),
+});
 
 export interface CreateShipmentContext {
   orderId: string;

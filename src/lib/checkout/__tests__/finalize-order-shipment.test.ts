@@ -122,6 +122,8 @@ describe("finalizeOrder — shipment step (Phase 5)", () => {
     expect(shipmentRows).toHaveLength(1);
     expect(shipmentRows[0].carrier).toBe("propio");
     expect(shipmentRows[0].status).toBe("preparando");
+    // SH-5a: dispatchSlot 'tarde' must be persisted in metadata.slot
+    expect((shipmentRows[0].metadata as { carrier: string; slot: string }).slot).toBe("tarde");
   });
 
   it("OF-1b: confirmTransfer admin path — creates shipments row with correct carrier", async () => {

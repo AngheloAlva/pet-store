@@ -69,6 +69,41 @@ async function seedOrder(db: TestDb, orderId: string) {
   });
 }
 
+describe("createShipmentContextSchema — SH-2a carrier boundary", () => {
+  it("accepts valid carriers", async () => {
+    const { createShipmentContextSchema } = await import("./create-shipment");
+    const validCarriers = ["propio", "mock_chilexpress", "mock_starken", "pickup"] as const;
+    for (const carrier of validCarriers) {
+      const result = createShipmentContextSchema.safeParse({
+        orderId: "ord-1",
+        carrier,
+        metadata: {},
+      });
+      expect(result.success, `carrier '${carrier}' should be valid`).toBe(true);
+    }
+  });
+
+  it("rejects unknown carrier 'fedex' before any DB write", async () => {
+    const { createShipmentContextSchema } = await import("./create-shipment");
+    const result = createShipmentContextSchema.safeParse({
+      orderId: "ord-1",
+      carrier: "fedex",
+      metadata: {},
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects empty carrier string", async () => {
+    const { createShipmentContextSchema } = await import("./create-shipment");
+    const result = createShipmentContextSchema.safeParse({
+      orderId: "ord-1",
+      carrier: "",
+      metadata: {},
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
 describe("createShipment — PGlite integration", () => {
   it("SH-1a: creates shipments row + initial tracking_events row", async () => {
     const db = await createTestDb();

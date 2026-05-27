@@ -31,6 +31,11 @@ export async function selectShipping(input: unknown): Promise<SelectShippingResu
 
   const { sessionId, shippingOptionId, dispatchSlot, commune, regionKey } = parsed.data;
 
+  // CO-3a: dispatchSlot required for propio (schema boundary check before any DB access)
+  if (shippingOptionId === "propio" && !dispatchSlot) {
+    return { ok: false, code: "VALIDATION_ERROR", message: "dispatchSlot is required for propio" };
+  }
+
   // Load session
   const rows = await db
     .select()
