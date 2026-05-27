@@ -11,6 +11,8 @@ import {
   PawPrint,
   Star,
   Newspaper,
+  ShoppingBag,
+  Gear,
 } from "@phosphor-icons/react/dist/ssr";
 
 const NAV_ITEMS = [
@@ -24,6 +26,8 @@ const NAV_ITEMS = [
   { label: "Mascotas", href: "/admin/mascotas", icon: PawPrint, disabled: false },
   { label: "Puntos", href: "/admin/puntos", icon: Star, disabled: false },
   { label: "Blog", href: "/admin/blog", icon: Newspaper, disabled: false },
+  { label: "Pedidos", href: "/admin/pedidos", icon: ShoppingBag, disabled: false },
+  { label: "Configuración", href: "/admin/configuracion", icon: Gear, disabled: false },
   { label: "Usuarios", href: "/admin/usuarios", icon: Users, disabled: false },
 ] as const;
 
