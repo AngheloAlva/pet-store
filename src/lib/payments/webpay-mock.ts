@@ -21,7 +21,7 @@ export const webpayMock: PaymentGateway = {
     return { token, redirectUrl };
   },
 
-  async verify(token: string): Promise<{ approved: boolean; authCode?: string }> {
+  async verify(token: string): Promise<{ approved: boolean; authCode?: string; reason?: string }> {
     if (token === "REJECT_TEST") {
       return { approved: false };
     }

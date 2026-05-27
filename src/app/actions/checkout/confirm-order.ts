@@ -6,19 +6,14 @@ import {
   checkoutSessions,
   orders,
   orderItems,
-  dteDocuments,
-  pointsTransactions,
   pointsConfig,
-  demoEmails,
 } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import { confirmOrderSchema } from "./confirm-order.schema";
 import { getGateway } from "@/lib/payments/registry";
-import { mockDTEProvider } from "@/lib/dte/mock";
 import { generateOrderNumber, todayDate } from "@/lib/checkout/order-number";
-import { validateStock } from "@/lib/checkout/stock-validator";
 import { findCompletedOrder } from "@/lib/checkout/idempotency";
-import { TEMPLATES } from "@/lib/notifications/templates/index";
+import { finalizeOrder } from "@/lib/checkout/finalize-order";
 
 export type ConfirmOrderResult =
   | { ok: true; orderNumber: string }
@@ -102,34 +97,18 @@ export async function confirmOrderWithDb(
 
   // Run the full transaction
   let orderNumber: string;
-  let dteId: string;
 
   await database.transaction(async (tx) => {
-    // 1. Validate stock (live query)
-    const stockLines = cartSnapshot.map((l) => ({
-      variantId: l.variantId,
-      productName: l.name,
-      quantity: l.quantity,
-    }));
-
-    const stockCheck = await validateStock(stockLines, tx as never);
-    if (!stockCheck.ok) {
-      throw Object.assign(new Error("OUT_OF_STOCK"), {
-        code: "OUT_OF_STOCK",
-        productName: stockCheck.productName,
-      });
-    }
-
-    // 2. Generate order number
+    // 1. Generate order number
     const today = todayDate();
     orderNumber = await generateOrderNumber(today, tx as never);
 
-    // 3. Load points config
+    // 2. Load points config
     const configRows = await tx.select().from(pointsConfig).where(eq(pointsConfig.id, "singleton"));
     const earnRate = configRows[0]?.earnRatePerCLP ?? 100;
     const pointsEarned = Math.floor(total / earnRate);
 
-    // 4. Create order — read paymentGateway from session, not hardcoded
+    // 3. Create order — read paymentGateway from session, not hardcoded
     const orderId = crypto.randomUUID();
     await tx.insert(orders).values({
       id: orderId,
@@ -152,7 +131,7 @@ export async function confirmOrderWithDb(
       pointsEarned,
     });
 
-    // 5. Create order items
+    // 4. Create order items
     for (const line of cartSnapshot) {
       await tx.insert(orderItems).values({
         id: crypto.randomUUID(),
@@ -167,83 +146,26 @@ export async function confirmOrderWithDb(
       });
     }
 
-    // 6. Stock decrement note:
-    // stockLevels has no quantity column — it tracks status per store.
-    // Full quantity tracking is out of scope for F3.1.
-    // validateStock above already guards against oversell.
-
-    // 7. Record points earned
-    if (pointsEarned > 0) {
-      // Get current balance
-      const prevTxRows = await tx
-        .select({ balanceAfter: pointsTransactions.balanceAfter })
-        .from(pointsTransactions)
-        .where(eq(pointsTransactions.userId, userId));
-
-      const currentBalance = prevTxRows.length > 0
-        ? Math.max(...prevTxRows.map((r) => r.balanceAfter))
-        : 0;
-
-      await tx.insert(pointsTransactions).values({
-        id: crypto.randomUUID(),
-        userId,
-        deltaPoints: pointsEarned,
-        balanceAfter: currentBalance + pointsEarned,
-        kind: "purchase",
-        referenceId: orderId,
-        description: `Puntos por orden ${orderNumber}`,
-      });
-    }
-
-    // 8. Update session status to completed
+    // 5. Update session status to completed
     await tx
       .update(checkoutSessions)
       .set({ status: "completed", updatedAt: new Date() })
       .where(eq(checkoutSessions.id, sessionId));
 
-    // 9. Issue DTE
-    const dteResult = await mockDTEProvider.issue({ id: orderId, documentType: "boleta" });
-    dteId = dteResult.dteId;
-
-    // Update order with dteId
-    await tx
-      .update(orders)
-      .set({ dteId: dteId!, updatedAt: new Date() })
-      .where(eq(orders.id, orderId));
-
-    // 9b. Create dte_documents row (spec § 6)
-    // Mock issues instantly so status is 'emitido' immediately.
-    await tx.insert(dteDocuments).values({
-      id: crypto.randomUUID(),
+    // 6. Run all post-payment side effects via finalizeOrder
+    await finalizeOrder(tx as never, {
       orderId,
-      dteId: dteId!,
-      status: "emitido",
-      issuedAt: new Date(),
-    });
-
-    // 10. Enqueue order confirmation email
-    const rendered = TEMPLATES.order_confirmation({
       orderNumber: orderNumber!,
-      customerName: userName,
-      items: cartSnapshot.map((l) => ({ name: l.name, qty: l.quantity, lineTotal: l.lineTotal })),
+      userId,
+      userEmail,
+      userName,
+      cartSnapshot,
       subtotal,
       shippingCost,
-      discount: 0,
       total,
       shippingAddress: (session.address ?? {}) as Record<string, string>,
-      dteId: dteId!,
       paymentMethodLabel: gateway.name,
-    });
-
-    await tx.insert(demoEmails).values({
-      id: crypto.randomUUID(),
-      toEmail: userEmail,
-      toUserId: userId,
-      subject: rendered.subject,
-      type: "order_confirmation",
-      bodyHtml: rendered.html,
-      bodyText: rendered.text,
-      data: { orderNumber: orderNumber! } as Record<string, unknown>,
+      pointsEarned,
     });
   });
 

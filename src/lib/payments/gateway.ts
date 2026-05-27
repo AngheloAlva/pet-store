@@ -19,6 +19,6 @@ export interface PaymentGateway {
     orderId: string;
     returnUrl: string;
   }): Promise<{ token: string; redirectUrl: string }>;
-  verify(token: string): Promise<{ approved: boolean; authCode?: string }>;
+  verify(token: string): Promise<{ approved: boolean; authCode?: string; reason?: string }>;
   refund?(paymentId: string, amount: number): Promise<RefundResult>;
 }

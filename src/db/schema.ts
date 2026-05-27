@@ -482,7 +482,7 @@ export const checkoutSessions = pgTable(
 export const ORDER_STATUS = ["pending", "confirmed", "cancelled", "refunded"] as const;
 export type OrderStatus = (typeof ORDER_STATUS)[number];
 
-export const ORDER_PAYMENT_STATUS = ["unpaid", "paid", "failed", "refunded"] as const;
+export const ORDER_PAYMENT_STATUS = ["unpaid", "paid", "failed", "refunded", "pending_verification"] as const;
 export type OrderPaymentStatus = (typeof ORDER_PAYMENT_STATUS)[number];
 
 export const orders = pgTable(
@@ -624,6 +624,34 @@ export const blogPostProducts = pgTable(
   (t) => [
     primaryKey({ columns: [t.postId, t.productId] }),
     index("idx_blog_post_products_product_id").on(t.productId),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// app_settings (F3.2b — singleton for admin-configurable flags)
+// ---------------------------------------------------------------------------
+export const appSettings = pgTable("app_settings", {
+  id: text("id").primaryKey().default("singleton"),
+  paymentFailureMode: boolean("payment_failure_mode").notNull().default(false),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ---------------------------------------------------------------------------
+// transfer_receipts (F3.2b — stores base64 receipt images for bank transfers)
+// ---------------------------------------------------------------------------
+export const transferReceipts = pgTable(
+  "transfer_receipts",
+  {
+    id: text("id").primaryKey(),
+    orderId: text("order_id")
+      .notNull()
+      .references(() => orders.id),
+    dataUrl: text("data_url").notNull(),
+    bankReference: text("bank_reference").notNull(),
+    uploadedAt: timestamp("uploaded_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("idx_transfer_receipts_order_id").on(t.orderId),
   ],
 );
 
@@ -810,5 +838,12 @@ export const blogPostProductsRelations = relations(blogPostProducts, ({ one }) =
   product: one(products, {
     fields: [blogPostProducts.productId],
     references: [products.id],
+  }),
+}));
+
+export const transferReceiptsRelations = relations(transferReceipts, ({ one }) => ({
+  order: one(orders, {
+    fields: [transferReceipts.orderId],
+    references: [orders.id],
   }),
 }));
