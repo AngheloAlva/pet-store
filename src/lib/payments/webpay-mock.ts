@@ -8,6 +8,7 @@ import type { PaymentGateway } from "./gateway";
 
 export const webpayMock: PaymentGateway = {
   gatewayId: "webpay_mock",
+  name: "WebPay (Demo)",
 
   async initiate(params: {
     amount: number;

@@ -29,10 +29,15 @@ export default async function PagoPage() {
   if (!session.address) redirect("/checkout/entrega");
   if (!session.shippingOptionId) redirect("/checkout/envio");
 
+  // Compute total from cart snapshot
+  const cartSnapshot = session.cartSnapshot as Array<{ unitPrice: number; quantity: number; lineTotal?: number }>;
+  const subtotal = cartSnapshot.reduce((sum, l) => sum + (l.lineTotal ?? l.unitPrice * l.quantity), 0);
+  const total = subtotal + (session.shippingCost ?? 0);
+
   return (
     <div className="bg-white rounded-lg shadow-sm p-6">
       <h2 className="text-xl font-semibold text-gray-900 mb-6">Método de pago</h2>
-      <PagoForm sessionId={session.id} />
+      <PagoForm sessionId={session.id} total={total} />
     </div>
   );
 }

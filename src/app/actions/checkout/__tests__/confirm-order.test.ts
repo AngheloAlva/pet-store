@@ -253,4 +253,86 @@ describe("confirmOrder — integration (real PGlite)", () => {
 
     expect(result).toMatchObject({ ok: false, code: "SESSION_EXPIRED" });
   });
+
+  // W3: MercadoPago REJECT_TEST integration — no order created when gateway rejects
+  it("MercadoPago REJECT_TEST: paymentGateway=mercadopago_mock + REJECT_TEST → PAYMENT_REJECTED, 0 orders", async () => {
+    const db = await createTestDb();
+    await seedBase(db);
+
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+    await db.insert(schema.checkoutSessions).values({
+      id: "sess-mp-reject-1",
+      userId: "user-confirm-1",
+      idempotencyKey: "idem-mp-reject-1",
+      cartSnapshot: [{ variantId: "var-c1", productId: "prod-c1", sku: "DF-001", name: "Dog Food Premium", quantity: 1, unitPrice: 30000, lineTotal: 30000 }],
+      address: { recipientName: "Confirm User", street: "Test St", number: "1", commune: "Santiago", region: "RM", phone: "+56912345678" },
+      shippingOptionId: "standard",
+      shippingCost: 0,
+      status: "payment_pending",
+      paymentGateway: "mercadopago_mock",
+      paymentMetadata: { kind: "mercadopago", installments: 3, installmentValue: 10000 },
+      expiresAt,
+    });
+
+    const { confirmOrderWithDb } = await import("@/app/actions/checkout/confirm-order");
+
+    const result = await confirmOrderWithDb(db as never, {
+      sessionId: "sess-mp-reject-1",
+      gatewayToken: "REJECT_TEST",
+      userId: "user-confirm-1",
+      userEmail: "confirm@test.cl",
+      userName: "Confirm User",
+    });
+
+    expect(result).toMatchObject({ ok: false, code: "PAYMENT_REJECTED" });
+
+    const orderRows = await db.select().from(schema.orders);
+    expect(orderRows).toHaveLength(0);
+  });
+
+  // Task 5.2 RED: MercadoPago dispatch via registry
+  it("MercadoPago dispatch: session.paymentGateway=mercadopago_mock → order confirmed via registry", async () => {
+    const db = await createTestDb();
+    await seedBase(db);
+
+    // Seed a session with paymentGateway set to mercadopago_mock
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+    await db.insert(schema.checkoutSessions).values({
+      id: "sess-mp-1",
+      userId: "user-confirm-1",
+      idempotencyKey: "idem-mp-1",
+      cartSnapshot: [{ variantId: "var-c1", productId: "prod-c1", sku: "DF-001", name: "Dog Food Premium", quantity: 1, unitPrice: 10000, lineTotal: 10000 }],
+      address: { recipientName: "Confirm User", street: "Test St", number: "1", commune: "Santiago", region: "RM", phone: "+56912345678" },
+      shippingOptionId: "standard",
+      shippingCost: 2000,
+      status: "payment_pending",
+      paymentGateway: "mercadopago_mock",
+      paymentMetadata: { kind: "mercadopago", installments: 3, installmentValue: 4000 },
+      expiresAt,
+    });
+
+    const { confirmOrderWithDb } = await import("@/app/actions/checkout/confirm-order");
+
+    const result = await confirmOrderWithDb(db as never, {
+      sessionId: "sess-mp-1",
+      gatewayToken: "valid-mp-token",
+      userId: "user-confirm-1",
+      userEmail: "confirm@test.cl",
+      userName: "Confirm User",
+    });
+
+    expect(result).toMatchObject({ ok: true });
+
+    // Verify paymentGateway is read from session (not hardcoded webpay_mock)
+    const orders = await db.select().from(schema.orders);
+    const mpOrder = orders.find((o) => o.checkoutSessionId === "sess-mp-1");
+    expect(mpOrder).toBeDefined();
+    expect(mpOrder?.paymentGateway).toBe("mercadopago_mock");
+    // W2: paymentMetadata must have exact discriminated union shape with installmentValue
+    expect(mpOrder?.paymentMetadata).toEqual({
+      kind: "mercadopago",
+      installments: 3,
+      installmentValue: 4000,
+    });
+  });
 });

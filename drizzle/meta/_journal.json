@@ -71,6 +71,13 @@
       "when": 1748400000000,
       "tag": "0009_dte_documents",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1748500000000,
+      "tag": "0010_payment_metadata",
+      "breakpoints": true
     }
   ]
 }

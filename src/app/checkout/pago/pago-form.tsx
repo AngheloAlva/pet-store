@@ -3,22 +3,33 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { initiatePayment } from "@/app/actions/checkout/initiate-payment";
+import { getAllGateways } from "@/lib/payments/registry";
+import { WebpayMethod } from "./webpay-method";
+import { MercadoPagoMethod } from "./mercadopago-method";
 
 interface PagoFormProps {
   sessionId: string;
+  total: number;
 }
 
-export function PagoForm({ sessionId }: PagoFormProps) {
+const gateways = getAllGateways();
+
+export function PagoForm({ sessionId, total }: PagoFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [mockMode, setMockMode] = useState<"approve" | "reject">("approve");
+  const [selectedMethod, setSelectedMethod] = useState<string>(gateways[0]?.gatewayId ?? "webpay_mock");
+  const [installments, setInstallments] = useState(1);
 
-  async function handlePay() {
+  async function handlePay(gatewayToken: string) {
     setError(null);
     setLoading(true);
 
-    const result = await initiatePayment({ sessionId, gateway: "webpay_mock" });
+    const result = await initiatePayment({
+      sessionId,
+      gateway: selectedMethod,
+      installments: selectedMethod === "mercadopago_mock" ? installments : undefined,
+    });
 
     setLoading(false);
 
@@ -31,66 +42,56 @@ export function PagoForm({ sessionId }: PagoFormProps) {
       return;
     }
 
-    // For mock gateway: navigate directly to resultado with the chosen token
-    const token = mockMode === "reject" ? "REJECT_TEST" : "approve";
-    router.push(`/checkout/resultado?paymentId=${result.token}&token=${token}`);
+    router.push(`/checkout/resultado?paymentId=${sessionId}&token=${gatewayToken}`);
   }
 
   return (
-    <div className="space-y-6">
-      {/* Webpay mock UI */}
-      <div className="border border-gray-200 rounded-lg p-4">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center">
-            <span className="text-white text-xs font-bold">WP</span>
-          </div>
-          <div>
-            <p className="font-medium text-gray-900">Webpay (Demo)</p>
-            <p className="text-xs text-gray-500">Simulación de pago con tarjeta</p>
-          </div>
+    <div className="space-y-4">
+      {/* Method Selector */}
+      <div>
+        <p className="text-sm font-medium text-gray-700 mb-3">Selecciona tu método de pago</p>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {gateways.map((gateway) => (
+            <button
+              key={gateway.gatewayId}
+              type="button"
+              onClick={() => {
+                setSelectedMethod(gateway.gatewayId);
+                setError(null);
+              }}
+              className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-colors ${
+                selectedMethod === gateway.gatewayId
+                  ? "border-blue-500 bg-blue-50"
+                  : "border-gray-200 bg-white hover:border-gray-300"
+              }`}
+            >
+              <div
+                className={`w-7 h-7 rounded flex items-center justify-center text-white text-xs font-bold ${
+                  gateway.gatewayId === "webpay_mock" ? "bg-blue-600" : "bg-sky-500"
+                }`}
+              >
+                {gateway.gatewayId === "webpay_mock" ? "WP" : "MP"}
+              </div>
+              <span className="text-sm font-medium text-gray-900">{gateway.name}</span>
+            </button>
+          ))}
         </div>
-
-        {/* Mock approve/reject toggle */}
-        <div className="mb-4 p-3 bg-yellow-50 rounded-md border border-yellow-200">
-          <p className="text-xs font-medium text-yellow-800 mb-2">Modo demo — simular resultado:</p>
-          <div className="flex gap-2">
-            <label className="flex items-center gap-1.5 cursor-pointer">
-              <input
-                type="radio"
-                name="mockMode"
-                value="approve"
-                checked={mockMode === "approve"}
-                onChange={() => setMockMode("approve")}
-                className="text-green-600"
-              />
-              <span className="text-sm text-yellow-800">Aprobar pago</span>
-            </label>
-            <label className="flex items-center gap-1.5 cursor-pointer">
-              <input
-                type="radio"
-                name="mockMode"
-                value="reject"
-                checked={mockMode === "reject"}
-                onChange={() => setMockMode("reject")}
-                className="text-red-600"
-              />
-              <span className="text-sm text-yellow-800">Rechazar pago</span>
-            </label>
-          </div>
-        </div>
-
-        {error && (
-          <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>
-        )}
-
-        <button
-          onClick={handlePay}
-          disabled={loading}
-          className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium py-2.5 px-4 rounded-md transition-colors"
-        >
-          {loading ? "Procesando..." : "Pagar con Webpay"}
-        </button>
       </div>
+
+      {/* Per-method inline UI */}
+      {selectedMethod === "webpay_mock" && (
+        <WebpayMethod onPay={handlePay} loading={loading} error={error} />
+      )}
+      {selectedMethod === "mercadopago_mock" && (
+        <MercadoPagoMethod
+          total={total}
+          installments={installments}
+          setInstallments={setInstallments}
+          onPay={handlePay}
+          loading={loading}
+          error={error}
+        />
+      )}
     </div>
   );
 }

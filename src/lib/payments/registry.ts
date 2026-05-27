@@ -1,13 +1,16 @@
 /**
- * Gateway registry — F3.1
+ * Gateway registry — F3.1 / extended in F3.2a
  * Maps gatewayId → PaymentGateway implementation.
- * F3.2 registers additional gateways here without editing call-sites.
+ * Adding a gateway = import + registerGateway() call here.
  */
 import type { PaymentGateway } from "./gateway";
 import { webpayMock } from "./webpay-mock";
+import { mercadopagoMock } from "./mercadopago-mock";
 
 const registry = new Map<string, PaymentGateway>();
-registry.set("webpay_mock", webpayMock);
+
+registry.set(webpayMock.gatewayId, webpayMock);
+registry.set(mercadopagoMock.gatewayId, mercadopagoMock);
 
 export function getGateway(gatewayId: string): PaymentGateway {
   const gateway = registry.get(gatewayId);
@@ -19,4 +22,12 @@ export function getGateway(gatewayId: string): PaymentGateway {
 
 export function registerGateway(gateway: PaymentGateway): void {
   registry.set(gateway.gatewayId, gateway);
+}
+
+export function getRegisteredGatewayIds(): string[] {
+  return Array.from(registry.keys());
+}
+
+export function getAllGateways(): PaymentGateway[] {
+  return Array.from(registry.values());
 }

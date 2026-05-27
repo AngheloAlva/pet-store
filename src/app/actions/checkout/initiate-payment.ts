@@ -6,6 +6,8 @@ import { checkoutSessions } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import { initiatePaymentSchema } from "./initiate-payment.schema";
 import { getGateway } from "@/lib/payments/registry";
+import { perInstallmentCLP } from "@/lib/payments/mercadopago-mock";
+import type { PaymentMetadata } from "@/lib/payments/metadata";
 
 export type InitiatePaymentResult =
   | { ok: true; token: string; redirectUrl: string }
@@ -20,7 +22,7 @@ export async function initiatePayment(input: unknown): Promise<InitiatePaymentRe
     return { ok: false, code: "VALIDATION_ERROR", message: JSON.stringify(parsed.error.flatten()) };
   }
 
-  const { sessionId, gateway } = parsed.data;
+  const { sessionId, gateway, installments } = parsed.data;
 
   // Load session
   const rows = await db
@@ -64,13 +66,25 @@ export async function initiatePayment(input: unknown): Promise<InitiatePaymentRe
     returnUrl: "/checkout/resultado",
   });
 
-  // Update session status to payment_pending
+  // Compute paymentMetadata
+  const paymentMetadata: PaymentMetadata =
+    gateway === "mercadopago_mock"
+      ? {
+          kind: "mercadopago",
+          installments: (installments ?? 1) as 1 | 3 | 6 | 12,
+          installmentValue: perInstallmentCLP(total, installments ?? 1),
+        }
+      : { kind: "webpay" };
+
+  // Update session status to payment_pending and persist gateway + metadata
   await db
     .update(checkoutSessions)
     .set({
       status: "payment_pending",
+      paymentGateway: gateway,
+      paymentMetadata: paymentMetadata as Record<string, unknown>,
       updatedAt: new Date(),
-    } as Record<string, unknown>)
+    })
     .where(eq(checkoutSessions.id, sessionId));
 
   return {

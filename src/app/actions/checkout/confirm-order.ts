@@ -13,7 +13,7 @@ import {
 } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import { confirmOrderSchema } from "./confirm-order.schema";
-import { webpayMock } from "@/lib/payments/webpay-mock";
+import { getGateway } from "@/lib/payments/registry";
 import { mockDTEProvider } from "@/lib/dte/mock";
 import { generateOrderNumber, todayDate } from "@/lib/checkout/order-number";
 import { validateStock } from "@/lib/checkout/stock-validator";
@@ -71,8 +71,16 @@ export async function confirmOrderWithDb(
     return { ok: false, code: "SESSION_NOT_PENDING" };
   }
 
-  // Verify payment via spec § 5 interface
-  const paymentResult = await webpayMock.verify(gatewayToken);
+  // Resolve gateway from session (set at initiate time) — tamper-safe
+  let gateway;
+  try {
+    gateway = getGateway(session.paymentGateway ?? "webpay_mock");
+  } catch {
+    return { ok: false, code: "VALIDATION_ERROR", message: "unknown payment gateway" };
+  }
+
+  // Verify payment via registry dispatch
+  const paymentResult = await gateway.verify(gatewayToken);
 
   if (!paymentResult.approved) {
     return { ok: false, code: "PAYMENT_REJECTED" };
@@ -121,7 +129,7 @@ export async function confirmOrderWithDb(
     const earnRate = configRows[0]?.earnRatePerCLP ?? 100;
     const pointsEarned = Math.floor(total / earnRate);
 
-    // 4. Create order
+    // 4. Create order — read paymentGateway from session, not hardcoded
     const orderId = crypto.randomUUID();
     await tx.insert(orders).values({
       id: orderId,
@@ -130,7 +138,8 @@ export async function confirmOrderWithDb(
       checkoutSessionId: sessionId,
       status: "confirmed",
       paymentStatus: "paid",
-      paymentGateway: "webpay_mock",
+      paymentGateway: session.paymentGateway ?? "webpay_mock",
+      paymentMetadata: session.paymentMetadata as Record<string, unknown> ?? null,
       gatewayToken,
       address: (session.address ?? {}) as Record<string, unknown>,
       shippingOptionId: session.shippingOptionId ?? "standard",
@@ -223,7 +232,7 @@ export async function confirmOrderWithDb(
       total,
       shippingAddress: (session.address ?? {}) as Record<string, string>,
       dteId: dteId!,
-      paymentMethodLabel: "Webpay (Demo)",
+      paymentMethodLabel: gateway.name,
     });
 
     await tx.insert(demoEmails).values({
