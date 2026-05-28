@@ -15,6 +15,12 @@ import { seedPointsConfig, seedPointsTransactions } from "./seed-data/points";
 import { seedDemoEmails } from "./seed-data/demo-emails";
 import { seedRestockAlerts } from "./seed-data/restock-alerts";
 import { seedBlogPosts, seedBlogPostProducts } from "./seed-data/blog-posts";
+import {
+  demoCheckoutSessions,
+  demoOrders,
+  demoOrderItems,
+  demoShipments,
+} from "./seed-data/demo-orders";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 type Db = PgliteDatabase<typeof schema>;
@@ -411,4 +417,56 @@ export async function applySeed(db: Db): Promise<void> {
     .insert(schema.orderSequences)
     .values({ date: currentDate, lastSeq: 0 })
     .onConflictDoNothing();
+
+  // --- demo checkout sessions (required FK for demo orders) ---
+  await db
+    .insert(schema.checkoutSessions)
+    .values(demoCheckoutSessions)
+    .onConflictDoUpdate({
+      target: schema.checkoutSessions.id,
+      set: {
+        status: schema.checkoutSessions.status,
+        paymentMetadata: schema.checkoutSessions.paymentMetadata,
+      },
+    });
+
+  // --- demo orders (3 orders for user-camila-demo) ---
+  await db
+    .insert(schema.orders)
+    .values(demoOrders)
+    .onConflictDoUpdate({
+      target: schema.orders.id,
+      set: {
+        status: schema.orders.status,
+        paymentStatus: schema.orders.paymentStatus,
+        updatedAt: schema.orders.updatedAt,
+      },
+    });
+
+  // --- demo order items ---
+  await db
+    .insert(schema.orderItems)
+    .values(demoOrderItems)
+    .onConflictDoUpdate({
+      target: schema.orderItems.id,
+      set: {
+        quantity: schema.orderItems.quantity,
+        unitPrice: schema.orderItems.unitPrice,
+        lineTotal: schema.orderItems.lineTotal,
+      },
+    });
+
+  // --- demo shipments (order-demo-001 completed delivery) ---
+  await db
+    .insert(schema.shipments)
+    .values(demoShipments)
+    .onConflictDoUpdate({
+      target: schema.shipments.id,
+      set: {
+        status: schema.shipments.status,
+        trackingNumber: schema.shipments.trackingNumber,
+        metadata: schema.shipments.metadata,
+        updatedAt: schema.shipments.updatedAt,
+      },
+    });
 }
