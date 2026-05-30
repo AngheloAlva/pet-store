@@ -18,6 +18,8 @@ import { render as renderWelcome } from "./welcome";
 import { render as renderPointsAdjustment } from "./points-adjustment";
 import { render as renderOther } from "./other";
 import { render as renderOrderConfirmation } from "./order-confirmation";
+import { render as renderSubscriptionReminder } from "./subscription-reminder";
+import { render as renderSubscriptionPaymentFailed } from "./subscription-payment-failed";
 import { render as renderShipmentDispatched } from "./shipment-dispatched";
 import { render as renderShipmentDelivered } from "./shipment-delivered";
 import { render as renderPickupReady } from "./pickup-ready";
@@ -35,6 +37,8 @@ import type { Data as OrderConfirmationData } from "./order-confirmation";
 import type { Data as ShipmentDispatchedData } from "./shipment-dispatched";
 import type { Data as ShipmentDeliveredData } from "./shipment-delivered";
 import type { Data as PickupReadyData } from "./pickup-ready";
+import type { Data as SubscriptionReminderData } from "./subscription-reminder";
+import type { Data as SubscriptionPaymentFailedData } from "./subscription-payment-failed";
 
 export interface RenderedEmail {
   subject: string;
@@ -55,6 +59,9 @@ export type TemplateData = {
   shipment_dispatched: ShipmentDispatchedData;
   shipment_delivered: ShipmentDeliveredData;
   pickup_ready: PickupReadyData;
+  // F3.5 — subscription notifications
+  subscription_reminder: SubscriptionReminderData;
+  subscription_payment_failed: SubscriptionPaymentFailedData;
   other: OtherData;
 };
 
@@ -71,5 +78,8 @@ export const TEMPLATES: { [K in DemoEmailType]: (data: TemplateData[K]) => Rende
   shipment_dispatched: renderShipmentDispatched,
   shipment_delivered: renderShipmentDelivered,
   pickup_ready: renderPickupReady,
+  // F3.5 — subscription notifications
+  subscription_reminder: renderSubscriptionReminder,
+  subscription_payment_failed: renderSubscriptionPaymentFailed,
   other: renderOther,
 };
