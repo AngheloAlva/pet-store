@@ -486,6 +486,9 @@ export const checkoutSessions = pgTable(
     dispatchSlot: text("dispatch_slot"),
     // F3.5 — subscription intent (set at PDP when user selects subscription mode)
     subscriptionIntent: jsonb("subscription_intent"),
+    // F3.6 — document type selection (null = boleta default)
+    documentType: text("document_type"),
+    receiver: jsonb("receiver"),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -576,6 +579,26 @@ export const orderSequences = pgTable("order_sequences", {
 // ---------------------------------------------------------------------------
 // dte_documents
 // ---------------------------------------------------------------------------
+
+// F3.6 — DTE type and document code constants
+export const DTE_TYPE = {
+  boleta: "boleta",
+  factura: "factura",
+  nota_credito: "nota_credito",
+  nota_debito: "nota_debito",
+  guia: "guia",
+} as const;
+export type DteType = (typeof DTE_TYPE)[keyof typeof DTE_TYPE];
+
+export const DTE_DOCUMENT_CODE = {
+  boleta: 39,
+  factura: 33,
+  nota_credito: 61,
+  nota_debito: 56,
+  guia: 52,
+} as const;
+export type DteDocumentCode = (typeof DTE_DOCUMENT_CODE)[keyof typeof DTE_DOCUMENT_CODE];
+
 export const DTE_STATUS = ["por_emitir", "emitido", "anulado", "rechazado"] as const;
 export type DteStatus = (typeof DTE_STATUS)[number];
 
@@ -583,15 +606,28 @@ export const dteDocuments = pgTable(
   "dte_documents",
   {
     id: text("id").primaryKey(),
-    orderId: text("order_id")
-      .notNull()
-      .references(() => orders.id),
+    orderId: text("order_id").references(() => orders.id),
     dteId: text("dte_id").notNull(),
     status: text("status").notNull().default("por_emitir"),
-    folio: text("folio"),
+    folio: integer("folio"),
     type: text("type"),
     issuedAt: timestamp("issued_at", { withTimezone: true }),
     pdfUrl: text("pdf_url"),
+    // F3.6 — tax fields
+    net: integer("net"),
+    taxAmount: integer("tax_amount"),
+    total: integer("total"),
+    // F3.6 — identity fields
+    issuerRut: text("issuer_rut"),
+    receiverRut: text("receiver_rut"),
+    receiverName: text("receiver_name"),
+    receiverBusinessLine: text("receiver_business_line"),
+    receiverAddress: text("receiver_address"),
+    documentCode: integer("document_code"),
+    stamp: text("stamp"),
+    referenceDteId: text("reference_dte_id").references((): AnyPgColumn => dteDocuments.id),
+    cancellationReason: text("cancellation_reason"),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -599,6 +635,12 @@ export const dteDocuments = pgTable(
     index("idx_dte_documents_order_id").on(t.orderId),
   ],
 );
+
+// F3.6 — folio counters (one row per DTE type)
+export const dtefolioCounters = pgTable("dte_folio_counters", {
+  type: text("type").primaryKey(),
+  lastFolio: integer("last_folio").notNull().default(0),
+});
 
 // ---------------------------------------------------------------------------
 // blog_posts
