@@ -3,6 +3,8 @@
  * - Active route: "Mis Pedidos" has aria-current="page" when on /cuenta/pedidos
  * - Disabled items have aria-disabled="true" and no href
  * - "Próximamente" badge rendered for disabled items
+ *
+ * T-29: Mis Suscripciones moved to ACTIVE_NAV_ITEMS (SD-1, SD-2)
  */
 import { vi, describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
@@ -79,5 +81,15 @@ describe("CuentaSidebar (HUB-2)", () => {
       // Should either have no href or an empty/non-navigable href
       expect(href === null || href === "" || href === "#").toBe(true);
     });
+  });
+
+  // T-29: Mis Suscripciones is now an active nav link
+  it("T-29: Mis Suscripciones renders as active link to /cuenta/suscripciones", () => {
+    render(<CuentaSidebar />);
+    const link = screen.getAllByRole("link").find((l) =>
+      l.textContent?.includes("Mis Suscripciones"),
+    );
+    expect(link).toBeInTheDocument();
+    expect(link).toHaveAttribute("href", "/cuenta/suscripciones");
   });
 });

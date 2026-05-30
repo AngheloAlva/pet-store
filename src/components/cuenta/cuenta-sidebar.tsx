@@ -25,13 +25,13 @@ const ACTIVE_NAV_ITEMS = [
   { label: "Mis Puntos", href: "/cuenta/puntos", icon: Star },
   { label: "Mis Citas", href: "/cuenta/citas", icon: CalendarCheck },
   { label: "Mis Alertas", href: "/cuenta/alertas", icon: Bell },
+  { label: "Mis Suscripciones", href: "/cuenta/suscripciones", icon: ArrowsClockwise },
 ] as const;
 
 const DISABLED_NAV_ITEMS = [
   { label: "Mis Documentos", icon: FileText },
   { label: "Mi Wallet", icon: Wallet },
   { label: "Mis Gift Cards", icon: Gift },
-  { label: "Mis Suscripciones", icon: ArrowsClockwise },
   { label: "Mi Estado de Cuenta", icon: ChartLine },
 ] as const;
 
