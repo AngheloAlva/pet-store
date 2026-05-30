@@ -29,4 +29,8 @@ export type Product = {
   ingredients?: string;
   nutritionalAnalysis?: Record<string, string>;
   featured?: boolean;
+  // F3.5 — subscription config
+  subscriptionEnabled: boolean;
+  subscriptionFrequencies: number[];
+  subscriptionDiscountPercent: number;
 };

@@ -18,6 +18,8 @@ export interface AppSettings {
   coveredCommunes: string[] | null;
   freeShippingThreshold: number | null;
   dispatchSlots: string[] | null;
+  // F3.5 — subscription reminder window
+  subscriptionReminderDays: number;
 }
 
 export type UpdateFailureModeResult =
@@ -38,6 +40,7 @@ export async function getAppSettingsWithDb(database: AnyDb): Promise<AppSettings
         coveredCommunes: rows[0].coveredCommunes ?? null,
         freeShippingThreshold: rows[0].freeShippingThreshold ?? null,
         dispatchSlots: rows[0].dispatchSlots ?? null,
+        subscriptionReminderDays: rows[0].subscriptionReminderDays ?? 3,
       };
     }
 
@@ -62,18 +65,19 @@ export async function getAppSettingsWithDb(database: AnyDb): Promise<AppSettings
         coveredCommunes: afterInsert[0].coveredCommunes ?? null,
         freeShippingThreshold: afterInsert[0].freeShippingThreshold ?? null,
         dispatchSlots: afterInsert[0].dispatchSlots ?? null,
+        subscriptionReminderDays: afterInsert[0].subscriptionReminderDays ?? 3,
       };
     }
   } catch (err) {
     // Only swallow "table does not exist" — older test DBs without the migration.
     // Real query errors must surface.
     if (err instanceof Error && /relation .* does not exist|no such table/i.test(err.message)) {
-      return { paymentFailureMode: false, coveredCommunes: null, freeShippingThreshold: null, dispatchSlots: null };
+      return { paymentFailureMode: false, coveredCommunes: null, freeShippingThreshold: null, dispatchSlots: null, subscriptionReminderDays: 3 };
     }
     throw err;
   }
 
-  return { paymentFailureMode: false, coveredCommunes: null, freeShippingThreshold: null, dispatchSlots: null };
+  return { paymentFailureMode: false, coveredCommunes: null, freeShippingThreshold: null, dispatchSlots: null, subscriptionReminderDays: 3 };
 }
 
 export async function getAppSettings(): Promise<AppSettings> {

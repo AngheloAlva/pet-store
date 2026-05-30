@@ -74,6 +74,10 @@ type ProductRow = {
   ingredients: string | null;
   nutritionalAnalysis: unknown;
   featured: boolean;
+  // F3.5 — subscription config
+  subscriptionEnabled: boolean;
+  subscriptionFrequencies: number[];
+  subscriptionDiscountPercent: number;
   variants: VariantRow[];
   images: ImageRow[];
   productCategories: ProductCategoryRow[];
@@ -176,6 +180,9 @@ export function mapProduct(row: ProductRow): Product {
       ? (row.nutritionalAnalysis as Record<string, string>)
       : undefined,
     featured: row.featured,
+    subscriptionEnabled: row.subscriptionEnabled,
+    subscriptionFrequencies: row.subscriptionFrequencies,
+    subscriptionDiscountPercent: row.subscriptionDiscountPercent,
     images,
     variants,
     categoryIds,

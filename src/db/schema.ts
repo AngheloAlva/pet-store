@@ -109,6 +109,10 @@ export const products = pgTable("products", {
   ingredients: text("ingredients"),
   nutritionalAnalysis: jsonb("nutritional_analysis"),
   featured: boolean("featured").notNull().default(false),
+  // F3.5 — subscription config
+  subscriptionEnabled: boolean("subscription_enabled").notNull().default(false),
+  subscriptionFrequencies: integer("subscription_frequencies").array().notNull().default([]),
+  subscriptionDiscountPercent: integer("subscription_discount_percent").notNull().default(0),
 });
 
 // ---------------------------------------------------------------------------
@@ -423,6 +427,9 @@ export const DEMO_EMAIL_TYPE = [
   "shipment_dispatched",
   "shipment_delivered",
   "pickup_ready",
+  // F3.5 — subscription notifications
+  "subscription_reminder",
+  "subscription_payment_failed",
   "other",
 ] as const;
 
@@ -647,6 +654,8 @@ export const appSettings = pgTable("app_settings", {
   coveredCommunes: text("covered_communes").array(),
   freeShippingThreshold: integer("free_shipping_threshold"),
   dispatchSlots: text("dispatch_slots").array(),
+  // F3.5 — subscription reminder window (days before nextChargeAt)
+  subscriptionReminderDays: integer("subscription_reminder_days").notNull().default(3),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -717,6 +726,71 @@ export const transferReceipts = pgTable(
     index("idx_transfer_receipts_order_id").on(t.orderId),
   ],
 );
+
+// ---------------------------------------------------------------------------
+// F3.5 — subscriptions
+// ---------------------------------------------------------------------------
+export const SUBSCRIPTION_STATUS = ["active", "paused", "cancelled"] as const;
+export type SubscriptionStatus = (typeof SUBSCRIPTION_STATUS)[number];
+
+export const CYCLE_STATUS = ["charged", "failed", "reminder_sent"] as const;
+export type CycleStatus = (typeof CYCLE_STATUS)[number];
+
+export const subscriptions = pgTable(
+  "subscriptions",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    productId: text("product_id")
+      .notNull()
+      .references(() => products.id),
+    variantId: text("variant_id")
+      .notNull()
+      .references(() => productVariants.id),
+    frequencyDays: integer("frequency_days").notNull(),
+    discountPercent: integer("discount_percent").notNull().default(0),
+    quantity: integer("quantity").notNull().default(1),
+    status: text("status").notNull().default("active"),
+    nextChargeAt: timestamp("next_charge_at", { withTimezone: true }).notNull(),
+    pausedUntil: timestamp("paused_until", { withTimezone: true }),
+    failedAttempts: integer("failed_attempts").notNull().default(0),
+    lastChargedAt: timestamp("last_charged_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("idx_subscriptions_status_next_charge").on(t.status, t.nextChargeAt),
+    index("idx_subscriptions_user_id").on(t.userId),
+  ],
+);
+
+export type Subscription = typeof subscriptions.$inferSelect;
+export type NewSubscription = typeof subscriptions.$inferInsert;
+
+export const subscriptionCycles = pgTable(
+  "subscription_cycles",
+  {
+    id: text("id").primaryKey(),
+    subscriptionId: text("subscription_id")
+      .notNull()
+      .references(() => subscriptions.id, { onDelete: "cascade" }),
+    orderId: text("order_id").references(() => orders.id),
+    status: text("status").notNull(),
+    chargedAt: timestamp("charged_at", { withTimezone: true }),
+    attemptNumber: integer("attempt_number").notNull().default(1),
+    failureReason: text("failure_reason"),
+    reminderSentAt: timestamp("reminder_sent_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("idx_subscription_cycles_sub_created").on(t.subscriptionId, t.createdAt),
+  ],
+);
+
+export type SubscriptionCycle = typeof subscriptionCycles.$inferSelect;
+export type NewSubscriptionCycle = typeof subscriptionCycles.$inferInsert;
 
 // ---------------------------------------------------------------------------
 // Relations
@@ -958,6 +1032,33 @@ export const userAddressesRelations = relations(userAddresses, ({ one }) => ({
   user: one(users, {
     fields: [userAddresses.userId],
     references: [users.id],
+  }),
+}));
+
+export const subscriptionsRelations = relations(subscriptions, ({ one, many }) => ({
+  user: one(users, {
+    fields: [subscriptions.userId],
+    references: [users.id],
+  }),
+  product: one(products, {
+    fields: [subscriptions.productId],
+    references: [products.id],
+  }),
+  variant: one(productVariants, {
+    fields: [subscriptions.variantId],
+    references: [productVariants.id],
+  }),
+  cycles: many(subscriptionCycles),
+}));
+
+export const subscriptionCyclesRelations = relations(subscriptionCycles, ({ one }) => ({
+  subscription: one(subscriptions, {
+    fields: [subscriptionCycles.subscriptionId],
+    references: [subscriptions.id],
+  }),
+  order: one(orders, {
+    fields: [subscriptionCycles.orderId],
+    references: [orders.id],
   }),
 }));
 

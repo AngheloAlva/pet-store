@@ -99,6 +99,13 @@
       "when": 1748800000000,
       "tag": "0013_user_addresses",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1748900000000,
+      "tag": "0014_subscriptions",
+      "breakpoints": true
     }
   ]
 }
