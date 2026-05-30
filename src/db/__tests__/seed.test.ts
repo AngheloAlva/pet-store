@@ -133,4 +133,26 @@ describe("seed determinism", () => {
     const allDeterministic = seedBlogPosts.every((p) => p.id.startsWith("blog-post-"));
     expect(allDeterministic).toBe(true);
   });
+
+  // T-32: Demo subscriptions for camila-demo
+  it("T-32: demo subscriptions data exports at least 2 rows for camila-demo", async () => {
+    const { demoSubscriptions } = await import("@/db/seed-data/demo-subscriptions");
+    expect(demoSubscriptions.length).toBeGreaterThanOrEqual(2);
+    const allForCamila = demoSubscriptions.every((s) => s.userId === "user-camila-demo");
+    expect(allForCamila).toBe(true);
+  });
+
+  it("T-32: demo subscriptions include at least 1 active and 1 paused", async () => {
+    const { demoSubscriptions } = await import("@/db/seed-data/demo-subscriptions");
+    const hasActive = demoSubscriptions.some((s) => s.status === "active");
+    const hasPaused = demoSubscriptions.some((s) => s.status === "paused");
+    expect(hasActive).toBe(true);
+    expect(hasPaused).toBe(true);
+  });
+
+  it("T-32: demo subscriptions have deterministic IDs", async () => {
+    const { demoSubscriptions } = await import("@/db/seed-data/demo-subscriptions");
+    const allDeterministic = demoSubscriptions.every((s) => s.id.startsWith("sub-camila-"));
+    expect(allDeterministic).toBe(true);
+  });
 });

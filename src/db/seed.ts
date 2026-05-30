@@ -21,6 +21,7 @@ import {
   demoOrderItems,
   demoShipments,
 } from "./seed-data/demo-orders";
+import { demoSubscriptions } from "./seed-data/demo-subscriptions";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 type Db = PgliteDatabase<typeof schema>;
@@ -467,6 +468,19 @@ export async function applySeed(db: Db): Promise<void> {
         trackingNumber: schema.shipments.trackingNumber,
         metadata: schema.shipments.metadata,
         updatedAt: schema.shipments.updatedAt,
+      },
+    });
+
+  // --- demo subscriptions for camila-demo (F3.5 T-32) ---
+  await db
+    .insert(schema.subscriptions)
+    .values(demoSubscriptions)
+    .onConflictDoUpdate({
+      target: schema.subscriptions.id,
+      set: {
+        status: schema.subscriptions.status,
+        nextChargeAt: schema.subscriptions.nextChargeAt,
+        updatedAt: schema.subscriptions.updatedAt,
       },
     });
 }

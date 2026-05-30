@@ -436,3 +436,72 @@ describe("cancelSubscriptionWithDb (T-14)", () => {
     expect(rows[0].status).toBe("cancelled");
   });
 });
+
+// ---------------------------------------------------------------------------
+// T-33 [XC] Auth guard audit — unauthenticated calls return UNAUTHENTICATED
+// XC-2: all thin wrapper server actions guard with getCurrentUser()
+// ---------------------------------------------------------------------------
+import { getCurrentUser } from "@/lib/session";
+
+const mockGetCurrentUser = vi.mocked(getCurrentUser);
+
+describe("T-33 Auth guard audit — thin wrappers", () => {
+  it("createSubscription: unauthenticated → UNAUTHENTICATED", async () => {
+    mockGetCurrentUser.mockResolvedValueOnce(null);
+    const { createSubscription } = await import("@/app/actions/cuenta/suscripciones");
+    const result = await createSubscription({
+      productId: "prod-1",
+      variantId: "var-1",
+      frequencyDays: 30,
+      discountPercent: 10,
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("UNAUTHENTICATED");
+  });
+
+  it("pauseSubscription: unauthenticated → UNAUTHENTICATED", async () => {
+    mockGetCurrentUser.mockResolvedValueOnce(null);
+    const { pauseSubscription } = await import("@/app/actions/cuenta/suscripciones");
+    const result = await pauseSubscription("sub-x", { type: "indefinite" });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("UNAUTHENTICATED");
+  });
+
+  it("resumeSubscription: unauthenticated → UNAUTHENTICATED", async () => {
+    mockGetCurrentUser.mockResolvedValueOnce(null);
+    const { resumeSubscription } = await import("@/app/actions/cuenta/suscripciones");
+    const result = await resumeSubscription("sub-x");
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("UNAUTHENTICATED");
+  });
+
+  it("cancelSubscription: unauthenticated → UNAUTHENTICATED", async () => {
+    mockGetCurrentUser.mockResolvedValueOnce(null);
+    const { cancelSubscription } = await import("@/app/actions/cuenta/suscripciones");
+    const result = await cancelSubscription("sub-x");
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("UNAUTHENTICATED");
+  });
+
+  it("changeFrequency: unauthenticated → UNAUTHENTICATED", async () => {
+    mockGetCurrentUser.mockResolvedValueOnce(null);
+    const { changeFrequency } = await import("@/app/actions/cuenta/suscripciones");
+    const result = await changeFrequency("sub-x", 30);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("UNAUTHENTICATED");
+  });
+
+  it("changeVariant: unauthenticated → UNAUTHENTICATED", async () => {
+    mockGetCurrentUser.mockResolvedValueOnce(null);
+    const { changeVariant } = await import("@/app/actions/cuenta/suscripciones");
+    const result = await changeVariant("sub-x", "var-y");
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("UNAUTHENTICATED");
+  });
+});
