@@ -1,7 +1,8 @@
 /**
  * T-15 [ACTION] admin/subscriptions.ts — updateSubscriptionConfigWithDb
+ * T-24 [NOTIF] sendSubscriptionRemindersWithDb
  * T-34 [XC] Admin role guard
- * CF-S1, CF-S2, CF-S3, CF-S4
+ * CF-S1, CF-S2, CF-S3, CF-S4, SN-S4, SN-S5, SN-S6
  */
 import { describe, it, expect, vi } from "vitest";
 
@@ -161,5 +162,166 @@ describe("updateSubscriptionConfigWithDb (T-15)", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.code).toBe("FORBIDDEN");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// T-24 sendSubscriptionRemindersWithDb
+// SN-S4, SN-S5, SN-S6
+// ---------------------------------------------------------------------------
+
+async function seedReminderBase(db: TestDb) {
+  await db.insert(schema.users).values([
+    { id: "r-admin-1", email: "radmin@test.cl", name: "R Admin", role: "admin", isDemoSeed: false, createdAt: new Date().toISOString() },
+    { id: "r-user-1", email: "ruser@test.cl", name: "R User", role: "customer", isDemoSeed: false, createdAt: new Date().toISOString() },
+  ]);
+  await db.insert(schema.appSettings).values({ id: "singleton", subscriptionReminderDays: 3 }).onConflictDoNothing();
+  await db.insert(schema.brands).values({ id: "r-brand-1", slug: "r-brand-1", name: "R Brand 1" });
+  await db.insert(schema.products).values({
+    id: "r-prod-1",
+    slug: "r-prod-1",
+    name: "Reminder Product",
+    brandId: "r-brand-1",
+    description: "Test",
+    subscriptionEnabled: true,
+    subscriptionFrequencies: [30],
+    subscriptionDiscountPercent: 10,
+  });
+  await db.insert(schema.productVariants).values({
+    id: "r-var-1",
+    productId: "r-prod-1",
+    sku: "R-SKU-1",
+    name: "R Variant",
+    quantityValue: "1.000",
+    quantityUnit: "kg",
+    priceAmount: 10000,
+    priceCurrency: "CLP",
+  });
+}
+
+describe("sendSubscriptionRemindersWithDb (T-24)", () => {
+  it("SN-S4: sends reminder when subscription is within reminder window and no prior reminder", async () => {
+    const db = await createTestDb();
+    await seedReminderBase(db);
+
+    const now = new Date("2025-01-10T12:00:00Z");
+    // nextChargeAt is 2 days away → within 3-day window
+    const nextCharge = new Date("2025-01-12T12:00:00Z");
+
+    await db.insert(schema.subscriptions).values({
+      id: "sub-remind-1",
+      userId: "r-user-1",
+      productId: "r-prod-1",
+      variantId: "r-var-1",
+      frequencyDays: 30,
+      discountPercent: 10,
+      status: "active",
+      nextChargeAt: nextCharge,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const { sendSubscriptionRemindersWithDb } = await import(
+      "@/app/actions/admin/subscriptions"
+    );
+
+    const result = await sendSubscriptionRemindersWithDb(db as never, now, db as never);
+    expect(result.sent).toBe(1);
+
+    // Verify a cycle row was written with reminderSentAt
+    const cycles = await db.select().from(schema.subscriptionCycles).where(
+      eq(schema.subscriptionCycles.subscriptionId, "sub-remind-1")
+    );
+    expect(cycles.length).toBe(1);
+    expect(cycles[0].reminderSentAt).not.toBeNull();
+    expect(cycles[0].status).toBe("reminder_sent");
+  });
+
+  it("SN-S5: does NOT send reminder when subscription is outside the reminder window", async () => {
+    const db = await createTestDb();
+    await seedReminderBase(db);
+
+    const now = new Date("2025-01-01T12:00:00Z");
+    // nextChargeAt is 10 days away → outside 3-day window
+    const nextCharge = new Date("2025-01-11T12:00:00Z");
+
+    await db.insert(schema.subscriptions).values({
+      id: "sub-outside-1",
+      userId: "r-user-1",
+      productId: "r-prod-1",
+      variantId: "r-var-1",
+      frequencyDays: 30,
+      discountPercent: 10,
+      status: "active",
+      nextChargeAt: nextCharge,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const { sendSubscriptionRemindersWithDb } = await import(
+      "@/app/actions/admin/subscriptions"
+    );
+
+    const result = await sendSubscriptionRemindersWithDb(db as never, now, db as never);
+    expect(result.sent).toBe(0);
+  });
+
+  it("SN-S6: does NOT send reminder for paused subscription", async () => {
+    const db = await createTestDb();
+    await seedReminderBase(db);
+
+    const now = new Date("2025-01-10T12:00:00Z");
+    const nextCharge = new Date("2025-01-12T12:00:00Z");
+
+    await db.insert(schema.subscriptions).values({
+      id: "sub-paused-1",
+      userId: "r-user-1",
+      productId: "r-prod-1",
+      variantId: "r-var-1",
+      frequencyDays: 30,
+      discountPercent: 10,
+      status: "paused",
+      nextChargeAt: nextCharge,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const { sendSubscriptionRemindersWithDb } = await import(
+      "@/app/actions/admin/subscriptions"
+    );
+
+    const result = await sendSubscriptionRemindersWithDb(db as never, now, db as never);
+    expect(result.sent).toBe(0);
+  });
+
+  it("SN idempotency: second call same day sends 0 reminders", async () => {
+    const db = await createTestDb();
+    await seedReminderBase(db);
+
+    const now = new Date("2025-01-10T12:00:00Z");
+    const nextCharge = new Date("2025-01-12T12:00:00Z");
+
+    await db.insert(schema.subscriptions).values({
+      id: "sub-idem-1",
+      userId: "r-user-1",
+      productId: "r-prod-1",
+      variantId: "r-var-1",
+      frequencyDays: 30,
+      discountPercent: 10,
+      status: "active",
+      nextChargeAt: nextCharge,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const { sendSubscriptionRemindersWithDb } = await import(
+      "@/app/actions/admin/subscriptions"
+    );
+
+    const first = await sendSubscriptionRemindersWithDb(db as never, now, db as never);
+    expect(first.sent).toBe(1);
+
+    const second = await sendSubscriptionRemindersWithDb(db as never, now, db as never);
+    expect(second.sent).toBe(0);
   });
 });

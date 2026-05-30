@@ -5,13 +5,18 @@
  * updateSubscriptionConfigWithDb: admin action to configure subscription on a product.
  * runSubscriptionCycle: admin-gated runner trigger.
  * advanceSubscription: admin-gated "adelantar próximo cobro".
+ * sendSubscriptionRemindersWithDb: reminder pass (T-24).
  */
 import { getCurrentUser } from "@/lib/session";
 import { db } from "@/db";
-import { users, products } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { users, products, productVariants, subscriptions, subscriptionCycles, appSettings } from "@/db/schema";
+import { eq, and, lte, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { randomUUID } from "node:crypto";
+import { shouldSendReminder } from "@/lib/subscriptions/reminder";
+import { sendDemoEmail } from "@/lib/notifications/demo-email";
+import { applySubscriptionDiscount } from "@/lib/subscriptions/pricing";
 
 type AnyDb = typeof db;
 
@@ -142,8 +147,6 @@ export async function advanceSubscriptionWithDb(
   database: AnyDb,
   subscriptionId: string,
 ): Promise<AdvanceSubscriptionResult> {
-  const { subscriptions } = await import("@/db/schema");
-
   const rows = await database
     .select()
     .from(subscriptions)
@@ -162,4 +165,128 @@ export async function advanceSubscriptionWithDb(
   const { runSubscriptionCycleWithDb } = await import("@/lib/subscriptions/runner");
   const result = await runSubscriptionCycleWithDb(database, { now, subscriptionId });
   return { ok: true, result };
+}
+
+// ---------------------------------------------------------------------------
+// sendSubscriptionRemindersWithDb (T-24)
+// SN-5, SN-S4, SN-S5, SN-S6
+// ---------------------------------------------------------------------------
+
+export interface SendRemindersResult {
+  sent: number;
+}
+
+export async function sendSubscriptionRemindersWithDb(
+  database: AnyDb,
+  now: Date = new Date(),
+  emailExecutor?: AnyDb,
+): Promise<SendRemindersResult> {
+  // Get reminderDays from appSettings (default 3)
+  const settingsRows = await database
+    .select({ subscriptionReminderDays: appSettings.subscriptionReminderDays })
+    .from(appSettings)
+    .where(eq(appSettings.id, "singleton"));
+
+  const reminderDays = settingsRows.length > 0 ? settingsRows[0].subscriptionReminderDays : 3;
+
+  // Query active subs within reminder window
+  const windowStart = new Date(now.getTime() + reminderDays * 24 * 60 * 60 * 1000);
+  const activeSubs = await database
+    .select()
+    .from(subscriptions)
+    .where(
+      and(
+        eq(subscriptions.status, "active"),
+        lte(subscriptions.nextChargeAt, windowStart),
+      ),
+    );
+
+  let sent = 0;
+
+  for (const sub of activeSubs) {
+    // Get cycle rows for this subscription
+    const cycleRows = await database
+      .select({
+        reminderSentAt: subscriptionCycles.reminderSentAt,
+      })
+      .from(subscriptionCycles)
+      .where(
+        and(
+          eq(subscriptionCycles.subscriptionId, sub.id),
+          isNull(subscriptionCycles.orderId),
+        ),
+      );
+
+    if (!shouldSendReminder(sub, cycleRows, now, reminderDays)) {
+      continue;
+    }
+
+    // Get user email for sending
+    const userRows = await database
+      .select({ email: users.email, name: users.name })
+      .from(users)
+      .where(eq(users.id, sub.userId));
+
+    if (userRows.length === 0) continue;
+
+    const user = userRows[0];
+
+    // Get product name and variant price
+    const productRows = await database
+      .select({ name: products.name })
+      .from(products)
+      .where(eq(products.id, sub.productId));
+
+    const productName = productRows.length > 0 ? productRows[0].name : "your subscription product";
+
+    const variantRows = await database
+      .select({ priceAmount: productVariants.priceAmount, name: productVariants.name })
+      .from(productVariants)
+      .where(eq(productVariants.id, sub.variantId));
+
+    const variantPrice = variantRows.length > 0 ? variantRows[0].priceAmount : 0;
+    const variantName = variantRows.length > 0 ? variantRows[0].name : undefined;
+    const discountedPrice = applySubscriptionDiscount(variantPrice, sub.discountPercent);
+
+    // Send reminder email
+    await sendDemoEmail({
+      to: user.email,
+      toUserId: sub.userId,
+      type: "subscription_reminder",
+      data: {
+        userName: user.name,
+        productName,
+        variantName,
+        nextChargeAt: sub.nextChargeAt,
+        frequencyDays: sub.frequencyDays,
+        discountedPrice,
+      },
+      executor: (emailExecutor ?? database) as typeof db,
+    });
+
+    // Write cycle row with reminderSentAt to prevent duplicate sends
+    await database.insert(subscriptionCycles).values({
+      id: randomUUID(),
+      subscriptionId: sub.id,
+      orderId: null,
+      status: "reminder_sent",
+      chargedAt: null,
+      attemptNumber: 0,
+      reminderSentAt: now,
+      createdAt: now,
+    });
+
+    sent++;
+  }
+
+  return { sent };
+}
+
+export async function sendSubscriptionReminders(): Promise<SendRemindersResult & { ok: boolean; code?: string }> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, code: "UNAUTHENTICATED", sent: 0 };
+  if (user.role !== "admin") return { ok: false, code: "FORBIDDEN", sent: 0 };
+
+  const result = await sendSubscriptionRemindersWithDb(db);
+  return { ok: true, ...result };
 }
