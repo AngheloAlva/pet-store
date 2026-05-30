@@ -85,4 +85,49 @@ describe("order-confirmation template", () => {
 
     expect(result.html).toContain("DTE-MOCK-UNIQUE-XYZ");
   });
+
+  // T-19 [RED] — O-1-a: email with pdfUrl renders "Descargar DTE" link
+  it("O-1-a: email with pdfUrl renders Descargar DTE link", async () => {
+    const { render } = await import("@/lib/notifications/templates/order-confirmation");
+
+    const result = render({
+      orderNumber: "PET-20260526-00001",
+      customerName: "Test",
+      items: [],
+      subtotal: 0,
+      shippingCost: 0,
+      discount: 0,
+      total: 0,
+      shippingAddress: {},
+      dteId: "abc-123",
+      pdfUrl: "/api/dte/abc-123/pdf",
+      paymentMethodLabel: "Webpay (Demo)",
+    });
+
+    expect(result.html).toContain("/api/dte/abc-123/pdf");
+    expect(result.html).toContain("Descargar DTE");
+    expect(result.text).toContain("/api/dte/abc-123/pdf");
+  });
+
+  // T-19 [RED] — O-1-b: email without pdfUrl renders without broken DTE link
+  it("O-1-b: email without pdfUrl has no DTE download link (backward compat)", async () => {
+    const { render } = await import("@/lib/notifications/templates/order-confirmation");
+
+    const result = render({
+      orderNumber: "PET-20260526-00001",
+      customerName: "Test",
+      items: [],
+      subtotal: 0,
+      shippingCost: 0,
+      discount: 0,
+      total: 0,
+      shippingAddress: {},
+      dteId: "DTE-MOCK-XYZ",
+      paymentMethodLabel: "Webpay (Demo)",
+    });
+
+    // Should not contain a broken href to undefined
+    expect(result.html).not.toContain("href=\"undefined\"");
+    expect(result.html).not.toContain("Descargar DTE");
+  });
 });

@@ -21,13 +21,18 @@ import {
   orders as ordersTable,
   type CarrierId,
   type DeliveryType,
+  type DteType,
 } from "@/db/schema";
 import { validateStock } from "@/lib/checkout/stock-validator";
-import { mockDTEProvider } from "@/lib/dte/mock";
+import { mockDTEProvider } from "@/lib/dte/mock-provider";
+import type { DteReceiver, DTEItem } from "@/lib/dte/provider";
 import { TEMPLATES } from "@/lib/notifications/templates/index";
 import { createShipment } from "@/lib/shipping/create-shipment";
 import type { ShipmentMetadata } from "@/lib/shipping/types";
 import { getCarrier } from "@/lib/carriers/index";
+
+// issuerRut for all demo-issued DTEs
+const ISSUER_RUT = "76000000-0";
 
 export interface CartLine {
   variantId: string;
@@ -52,6 +57,10 @@ export interface FinalizeOrderContext {
   shippingAddress: Record<string, string>;
   paymentMethodLabel: string;
   pointsEarned: number;
+  // F3.6 — DTE fields (required; callers build from session data)
+  documentType: DteType;
+  receiver: DteReceiver;
+  items: DTEItem[];
   // F3.3 — shipment fields (optional; defaults to 'propio' when absent for backward compat)
   carrier?: CarrierId | null;
   deliveryType?: DeliveryType | null;
@@ -83,6 +92,9 @@ export async function finalizeOrder(
     shippingAddress,
     paymentMethodLabel,
     pointsEarned,
+    documentType,
+    receiver,
+    items,
     carrier,
     deliveryType,
     dispatchSlot,
@@ -107,8 +119,15 @@ export async function finalizeOrder(
     }
   }
 
-  // 2. Issue DTE
-  const dteResult = await mockDTEProvider.issue({ id: orderId, documentType: "boleta" });
+  // 2. Issue DTE via MockDTEProvider (F3.6: full issuance with folio, IVA, stamp)
+  const dteResult = await mockDTEProvider.issueDocument(tx as never, {
+    orderId,
+    documentType,
+    items,
+    receiver,
+    total,
+    issuerRut: ISSUER_RUT,
+  });
   const dteId = dteResult.dteId;
 
   // 3. Update order with dteId
@@ -117,13 +136,27 @@ export async function finalizeOrder(
     .set({ dteId, updatedAt: new Date() })
     .where(eq(ordersTable.id, orderId));
 
-  // 4. Create dte_documents row
+  // 4. Create dte_documents row — fully populated (I-3)
+  const issuedAt = new Date();
   await tx.insert(dteDocuments).values({
-    id: crypto.randomUUID(),
+    id: dteId,
     orderId,
     dteId,
+    type: dteResult.type,
+    folio: dteResult.folio,
+    documentCode: dteResult.documentCode,
+    net: dteResult.net,
+    taxAmount: dteResult.taxAmount,
+    total: dteResult.total,
+    issuerRut: ISSUER_RUT,
+    receiverRut: receiver.rut,
+    receiverName: receiver.name,
+    receiverBusinessLine: receiver.businessLine ?? null,
+    receiverAddress: receiver.address ?? null,
+    stamp: dteResult.stamp,
+    pdfUrl: dteResult.pdfUrl,
     status: "emitido",
-    issuedAt: new Date(),
+    issuedAt,
   });
 
   // 5. Record points earned
@@ -159,6 +192,7 @@ export async function finalizeOrder(
     total,
     shippingAddress,
     dteId,
+    pdfUrl: dteResult.pdfUrl,
     paymentMethodLabel,
   });
 

@@ -148,15 +148,23 @@ describe("confirmOrder — integration (real PGlite)", () => {
     const emails = await db.select().from(schema.demoEmails);
     expect(emails.some((e) => e.type === "order_confirmation")).toBe(true);
 
-    // W2: Verify dteId is saved on the order
-    expect(orders[0].dteId).toMatch(/^DTE-MOCK-/);
+    // T-12 [LOCKSTEP] W2: Verify dteId is saved on the order (now a UUID from MockDTEProvider)
+    expect(orders[0].dteId).toBeTruthy();
+    expect(typeof orders[0].dteId).toBe("string");
 
-    // W2: Verify dte_documents row was created
+    // W2: Verify dte_documents row was created and fully populated (I-3)
     const dteDocs = await db.select().from(schema.dteDocuments);
     expect(dteDocs).toHaveLength(1);
     expect(dteDocs[0].orderId).toBe(orders[0].id);
     expect(dteDocs[0].dteId).toBe(orders[0].dteId);
     expect(dteDocs[0].status).toBe("emitido");
+    // T-12 [LOCKSTEP] I-3: full row populated
+    expect(dteDocs[0].folio).toBeGreaterThanOrEqual(1);
+    expect(dteDocs[0].net).toBeGreaterThan(0);
+    expect(dteDocs[0].taxAmount).toBeGreaterThan(0);
+    expect(dteDocs[0].total).toBeGreaterThan(0);
+    // INV-2: net + taxAmount === total
+    expect((dteDocs[0].net ?? 0) + (dteDocs[0].taxAmount ?? 0)).toBe(dteDocs[0].total);
   });
 
   it("PAYMENT_REJECTED rolls back — no order created", async () => {

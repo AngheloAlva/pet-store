@@ -13,6 +13,7 @@ export interface Data {
   total: number;
   shippingAddress: Record<string, string | number | undefined>;
   dteId: string;
+  pdfUrl?: string;
   paymentMethodLabel: string;
 }
 
@@ -42,6 +43,7 @@ export function render(data: Data): { subject: string; html: string; text: strin
     "",
     `Número de pedido: ${data.orderNumber}`,
     `DTE / Boleta: ${data.dteId}`,
+    data.pdfUrl ? `Descargar DTE: ${data.pdfUrl}` : "",
     `Método de pago: ${data.paymentMethodLabel}`,
     "",
     "Productos:",
@@ -106,7 +108,8 @@ export function render(data: Data): { subject: string; html: string; text: strin
 
               <p style="font-size: 13px; color: #6b7280; margin: 0 0 8px;">Dirección de envío: ${addressStr}</p>
               <p style="font-size: 13px; color: #6b7280; margin: 0 0 8px;">Método de pago: ${data.paymentMethodLabel}</p>
-              <p style="font-size: 13px; color: #6b7280; margin: 0 0 24px;">DTE / Boleta: <strong>${data.dteId}</strong></p>
+              <p style="font-size: 13px; color: #6b7280; margin: 0 0 8px;">DTE / Boleta: <strong>${data.dteId}</strong></p>
+              ${data.pdfUrl ? `<p style="margin: 0 0 24px;"><a href="${data.pdfUrl}" style="font-size: 13px; color: #16a34a; text-decoration: underline;">Descargar DTE</a></p>` : '<p style="margin: 0 0 24px;"></p>'}
 
               <p style="font-size: 14px; color: #6b7280; margin: 0;">¡Gracias por tu compra!</p>
             </td>

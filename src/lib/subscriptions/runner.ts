@@ -287,6 +287,7 @@ async function processSubscriptionCycle(
     });
 
     // 5f. Call finalizeOrder (DTE, points, confirmation email, shipment) (CY-8)
+    // Subscription renewals default to boleta with consumer RUT (no factura selection seam)
     await finalizeOrder(tx as never, {
       orderId,
       orderNumber,
@@ -300,6 +301,16 @@ async function processSubscriptionCycle(
       shippingAddress: {},
       paymentMethodLabel: "Suscripción",
       pointsEarned,
+      // F3.6 — subscription renewals always use boleta default
+      documentType: "boleta",
+      receiver: { rut: "66666666-6", name: user.name },
+      items: cartSnapshot.map((l) => ({
+        description: l.name,
+        quantity: l.quantity,
+        unitPrice: l.unitPrice,
+        lineTotal: l.lineTotal,
+        afecto: true,
+      })),
     });
 
     // 5g. Write cycle row (status = 'charged')

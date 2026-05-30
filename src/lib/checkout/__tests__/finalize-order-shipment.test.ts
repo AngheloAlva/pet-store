@@ -111,6 +111,10 @@ describe("finalizeOrder — shipment step (Phase 5)", () => {
         pickupStoreId: null,
         regionKey: null,
         deliveryType: "despacho",
+        // T-12 [LOCKSTEP] — widened context fields
+        documentType: "boleta",
+        receiver: { rut: "66666666-6", name: "Phase5 User" },
+        items: [],
       });
     });
 
@@ -153,6 +157,10 @@ describe("finalizeOrder — shipment step (Phase 5)", () => {
         pickupStoreId: null,
         regionKey: "RM",
         deliveryType: "courier",
+        // T-12 [LOCKSTEP] — widened context fields
+        documentType: "boleta",
+        receiver: { rut: "66666666-6", name: "Phase5 User" },
+        items: [],
       });
     });
 
@@ -191,6 +199,10 @@ describe("finalizeOrder — shipment step (Phase 5)", () => {
       pickupStoreId: null,
       regionKey: null,
       deliveryType: "despacho" as const,
+      // T-12 [LOCKSTEP] — widened context fields
+      documentType: "boleta" as const,
+      receiver: { rut: "66666666-6", name: "Phase5 User" },
+      items: [],
     };
 
     await db.transaction(async (tx) => {
@@ -251,6 +263,10 @@ describe("finalizeOrder — shipment step (Phase 5)", () => {
       pickupStoreId: "store-phase5",
       regionKey: null,
       deliveryType: "pickup" as const,
+      // T-12 [LOCKSTEP] — widened context fields
+      documentType: "boleta" as const,
+      receiver: { rut: "66666666-6", name: "Phase5 User" },
+      items: [],
     };
 
     await db.transaction(async (tx) => {

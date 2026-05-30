@@ -18,9 +18,12 @@ import {
   trackingEvents,
   type CarrierId,
   type ShipmentStatus,
+  type DteType,
 } from "@/db/schema";
 import { desc, eq } from "drizzle-orm";
 import { finalizeOrder, type CartLine } from "@/lib/checkout/finalize-order";
+import { buildBoletaReceiver } from "@/lib/dte/provider";
+import type { DteReceiver, DTEItem } from "@/lib/dte/provider";
 import { revalidatePath } from "next/cache";
 
 type AnyDb = typeof db;
@@ -241,13 +244,15 @@ export async function confirmTransferWithDb(
 
   const customer = customerRows[0] ?? { email: "unknown@test.cl", name: "Unknown" };
 
-  // Load checkout session for delivery fields (F3.3)
+  // Load checkout session for delivery and DTE fields (F3.3, F3.6)
   const sessionRows = await database
     .select({
       deliveryType: checkoutSessions.deliveryType,
       shippingOptionId: checkoutSessions.shippingOptionId,
       dispatchSlot: checkoutSessions.dispatchSlot,
       pickupStoreId: checkoutSessions.pickupStoreId,
+      documentType: checkoutSessions.documentType,
+      receiver: checkoutSessions.receiver,
     })
     .from(checkoutSessions)
     .where(eq(checkoutSessions.id, order.checkoutSessionId));
@@ -263,6 +268,31 @@ export async function confirmTransferWithDb(
     unitPrice: i.unitPrice,
     lineTotal: i.lineTotal,
   }));
+
+  // Build DTE context from session — not re-fetched to preserve pure-side-effect contract (I-6)
+  const documentType: DteType = (session?.documentType as DteType | null) ?? "boleta";
+  let receiver: DteReceiver;
+  if (documentType === "factura" && session?.receiver) {
+    receiver = session.receiver as DteReceiver;
+  } else {
+    receiver = buildBoletaReceiver({ rut: undefined, name: customer.name });
+  }
+  const dteItems: DTEItem[] = cartSnapshot.map((l) => ({
+    description: l.name,
+    quantity: l.quantity,
+    unitPrice: l.unitPrice,
+    lineTotal: l.lineTotal,
+    afecto: true,
+  }));
+  if (order.shippingCost > 0) {
+    dteItems.push({
+      description: "Despacho",
+      quantity: 1,
+      unitPrice: order.shippingCost,
+      lineTotal: order.shippingCost,
+      afecto: true,
+    });
+  }
 
   try {
     await database.transaction(async (tx) => {
@@ -295,6 +325,9 @@ export async function confirmTransferWithDb(
         shippingAddress: (order.address ?? {}) as Record<string, string>,
         paymentMethodLabel: "Transferencia bancaria (Demo)",
         pointsEarned,
+        documentType,
+        receiver,
+        items: dteItems,
         carrier: (session?.shippingOptionId ?? order.shippingOptionId) as CarrierId | null,
         deliveryType: session?.deliveryType as "despacho" | "pickup" | "courier" | null,
         dispatchSlot: session?.dispatchSlot ?? null,

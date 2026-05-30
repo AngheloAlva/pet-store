@@ -174,6 +174,18 @@ describe("finalizeOrder — integration (real PGlite)", () => {
         shippingAddress: { recipientName: "Finalize User", commune: "Santiago" },
         paymentMethodLabel: "Transferencia bancaria (Demo)",
         pointsEarned: Math.floor(8990 / 100),
+        // T-12 [RED] — widened context fields
+        documentType: "boleta",
+        receiver: { rut: "66666666-6", name: "Finalize User" },
+        items: [
+          {
+            description: "Cat Food",
+            quantity: 2,
+            unitPrice: 3000,
+            lineTotal: 6000,
+            afecto: true,
+          },
+        ],
       });
       dteId = result.dteId;
     });
@@ -182,8 +194,16 @@ describe("finalizeOrder — integration (real PGlite)", () => {
     const dteDocs = await db.select().from(schema.dteDocuments);
     expect(dteDocs).toHaveLength(1);
     expect(dteDocs[0].orderId).toBe(orderId);
-    expect(dteDocs[0].dteId).toMatch(/^DTE-MOCK-/);
+    // T-12 [RED] — row must now be fully populated (I-3)
     expect(dteDocs[0].status).toBe("emitido");
+    expect(dteDocs[0].folio).toBeGreaterThanOrEqual(1);
+    expect(dteDocs[0].net).toBeGreaterThan(0);
+    expect(dteDocs[0].taxAmount).toBeGreaterThan(0);
+    expect(dteDocs[0].total).toBe(8990);
+    // INV-2: net + taxAmount === total
+    expect((dteDocs[0].net ?? 0) + (dteDocs[0].taxAmount ?? 0)).toBe(dteDocs[0].total);
+    expect(dteDocs[0].stamp).toBeTruthy();
+    expect(dteDocs[0].pdfUrl).toMatch(/^\/api\/dte\/.+\/pdf$/);
 
     // orders.dteId updated
     const orderRows = await db.select().from(schema.orders).where(eq(schema.orders.id, orderId));
@@ -241,6 +261,10 @@ describe("finalizeOrder — integration (real PGlite)", () => {
         shippingAddress: {},
         paymentMethodLabel: "Transferencia bancaria (Demo)",
         pointsEarned: 0,
+        // T-12 [RED] — widened context fields (zero-value boleta)
+        documentType: "boleta",
+        receiver: { rut: "66666666-6", name: "Consumidor Final" },
+        items: [],
       });
     });
 

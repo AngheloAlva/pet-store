@@ -14,6 +14,9 @@ import { getGateway } from "@/lib/payments/registry";
 import { generateOrderNumber, todayDate } from "@/lib/checkout/order-number";
 import { findCompletedOrder } from "@/lib/checkout/idempotency";
 import { finalizeOrder } from "@/lib/checkout/finalize-order";
+import { buildBoletaReceiver } from "@/lib/dte/provider";
+import type { DteReceiver, DTEItem } from "@/lib/dte/provider";
+import type { DteType } from "@/db/schema";
 
 export type ConfirmOrderResult =
   | { ok: true; orderNumber: string }
@@ -153,6 +156,31 @@ export async function confirmOrderWithDb(
       .where(eq(checkoutSessions.id, sessionId));
 
     // 6. Run all post-payment side effects via finalizeOrder (includes shipment creation in step 7)
+    // Build DTE context from session — not re-fetched to preserve pure-side-effect contract (I-6)
+    const documentType: DteType = (session.documentType as DteType | null) ?? "boleta";
+    let receiver: DteReceiver;
+    if (documentType === "factura" && session.receiver) {
+      receiver = session.receiver as DteReceiver;
+    } else {
+      receiver = buildBoletaReceiver({ rut: undefined, name: userName });
+    }
+    const dteItems: DTEItem[] = cartSnapshot.map((l) => ({
+      description: l.name,
+      quantity: l.quantity,
+      unitPrice: l.unitPrice,
+      lineTotal: l.lineTotal,
+      afecto: true,
+    }));
+    if (shippingCost > 0) {
+      dteItems.push({
+        description: "Despacho",
+        quantity: 1,
+        unitPrice: shippingCost,
+        lineTotal: shippingCost,
+        afecto: true,
+      });
+    }
+
     await finalizeOrder(tx as never, {
       orderId,
       orderNumber: orderNumber!,
@@ -166,6 +194,9 @@ export async function confirmOrderWithDb(
       shippingAddress: (session.address ?? {}) as Record<string, string>,
       paymentMethodLabel: gateway.name,
       pointsEarned,
+      documentType,
+      receiver,
+      items: dteItems,
       carrier: session.shippingOptionId as import("@/db/schema").CarrierId | null,
       deliveryType: session.deliveryType as "despacho" | "pickup" | "courier" | null,
       dispatchSlot: session.dispatchSlot ?? null,

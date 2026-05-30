@@ -146,7 +146,8 @@ describe("confirmOrder regression — finalizeOrder delegation (Task 1.2)", () =
     const orders = await db.select().from(schema.orders);
     expect(orders).toHaveLength(1);
     expect(orders[0].paymentStatus).toBe("paid");
-    expect(orders[0].dteId).toMatch(/^DTE-MOCK-/);
+    // T-12 [LOCKSTEP] dteId is now a UUID from MockDTEProvider (not DTE-MOCK-...)
+    expect(orders[0].dteId).toBeTruthy();
 
     // DTE document created
     const dteDocs = await db.select().from(schema.dteDocuments);
