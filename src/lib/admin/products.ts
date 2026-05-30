@@ -67,6 +67,10 @@ export type ProductForEdit = {
     barcode: string | null;
     stockByStore: Record<string, string>;
   }[];
+  // F3.5 — subscription config
+  subscriptionEnabled?: boolean;
+  subscriptionFrequencies?: number[];
+  subscriptionDiscountPercent?: number;
 };
 
 export type AdminProductFilters = {
@@ -238,6 +242,10 @@ export async function loadProductForEdit(
     categoryIds: row.productCategories.map((pc) => pc.categoryId),
     images: sortedImages,
     variants,
+    // F3.5 — subscription config
+    subscriptionEnabled: row.subscriptionEnabled,
+    subscriptionFrequencies: row.subscriptionFrequencies,
+    subscriptionDiscountPercent: row.subscriptionDiscountPercent,
   };
 }
 

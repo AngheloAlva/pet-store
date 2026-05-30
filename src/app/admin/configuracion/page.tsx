@@ -6,6 +6,7 @@
 import { getAppSettings } from "@/app/actions/admin/settings";
 import { FailureModeToggle } from "./failure-mode-toggle";
 import { CoberturaSettings } from "@/components/admin/cobertura-settings";
+import { SubscriptionCycleRunButton } from "./subscription-cycle-button";
 
 const DEFAULT_COMMUNES = ["Providencia", "Las Condes", "Ñuñoa", "Santiago", "Vitacura"];
 const DEFAULT_SLOTS = ["manana", "tarde"];
@@ -34,6 +35,18 @@ export default async function AdminConfiguracionPage() {
         </div>
 
         <FailureModeToggle initial={settings.paymentFailureMode} />
+      </div>
+
+      {/* Subscription cycle runner (F3.5) */}
+      <div className="bg-white rounded-lg shadow-sm p-6 space-y-4">
+        <div>
+          <h2 className="text-base font-semibold text-gray-900">Subscription Cycle Runner</h2>
+          <p className="text-sm text-gray-500 mt-1">
+            Manually trigger the subscription billing cycle. Processes all due subscriptions
+            and sends reminder emails for upcoming charges.
+          </p>
+        </div>
+        <SubscriptionCycleRunButton />
       </div>
 
       {/* Cobertura settings (F3.3) */}

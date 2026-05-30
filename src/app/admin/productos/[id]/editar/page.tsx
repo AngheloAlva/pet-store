@@ -3,6 +3,7 @@ import { loadProductForEdit, loadAllStores } from "@/lib/admin/products";
 import { loadAllBrands, loadAllCategories } from "@/db/loaders";
 import { updateProduct } from "@/app/actions/admin/products";
 import ProductForm from "@/components/admin/products/product-form";
+import { SubscriptionConfigSection } from "@/components/admin/products/subscription-config-section";
 
 type Params = Promise<{ id: string }>;
 
@@ -38,6 +39,16 @@ export default async function EditarProductoPage({ params }: Props) {
         stores={stores}
         initial={product}
         action={updateProduct.bind(null, id)}
+      />
+
+      {/* F3.5 — Subscription configuration */}
+      <SubscriptionConfigSection
+        productId={id}
+        initial={{
+          subscriptionEnabled: product.subscriptionEnabled ?? false,
+          subscriptionFrequencies: product.subscriptionFrequencies ?? [],
+          subscriptionDiscountPercent: product.subscriptionDiscountPercent ?? 0,
+        }}
       />
     </div>
   );
