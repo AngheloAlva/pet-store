@@ -174,6 +174,34 @@ export async function confirmOrderWithDb(
     });
   });
 
+  // T-26: subscription seam — best-effort, non-throwing
+  // If the session carried a subscription intent, create the subscription AFTER
+  // the order tx commits (design seam: does not roll back on failure).
+  const intent = session.subscriptionIntent as {
+    variantId: string;
+    productId: string;
+    frequencyDays: number;
+    discountPercent: number;
+  } | null | undefined;
+
+  if (intent && intent.productId && intent.variantId) {
+    try {
+      const { createSubscriptionWithDb } = await import(
+        "@/app/actions/cuenta/suscripciones"
+      );
+      await createSubscriptionWithDb(database, {
+        userId,
+        productId: intent.productId,
+        variantId: intent.variantId,
+        frequencyDays: intent.frequencyDays,
+        discountPercent: intent.discountPercent,
+      });
+    } catch {
+      // Best-effort: log and continue — subscription failure does not fail the order
+      console.warn("[confirm-order] subscription creation failed (non-fatal)");
+    }
+  }
+
   return { ok: true, orderNumber: orderNumber! };
 }
 

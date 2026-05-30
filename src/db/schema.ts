@@ -484,6 +484,8 @@ export const checkoutSessions = pgTable(
     deliveryType: text("delivery_type"),
     pickupStoreId: text("pickup_store_id").references(() => stores.id),
     dispatchSlot: text("dispatch_slot"),
+    // F3.5 — subscription intent (set at PDP when user selects subscription mode)
+    subscriptionIntent: jsonb("subscription_intent"),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

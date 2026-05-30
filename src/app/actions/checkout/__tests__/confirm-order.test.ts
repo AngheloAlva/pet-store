@@ -5,6 +5,9 @@
  * REJECT_TEST token → PAYMENT_REJECTED + rollback.
  * Duplicate sessionId → returns existing orderNumber.
  * SESSION_EXPIRED → error.
+ *
+ * T-26 [UI] Checkout seam — subscription intent persists through confirm-order
+ * SP-S4, SP-S5, SP-S8
  */
 import { describe, it, expect, vi } from "vitest";
 
@@ -288,6 +291,115 @@ describe("confirmOrder — integration (real PGlite)", () => {
 
     const orderRows = await db.select().from(schema.orders);
     expect(orderRows).toHaveLength(0);
+  });
+
+  // T-26: subscription intent — SP-S4, SP-S5, SP-S8
+  it("SP-S4: subscription intent present → subscription row created after successful order", async () => {
+    const db = await createTestDb();
+    await seedBase(db);
+
+    // Enable subscription on product
+    await db.update(schema.products).set({
+      subscriptionEnabled: true,
+      subscriptionFrequencies: [30],
+      subscriptionDiscountPercent: 10,
+    });
+
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+    await db.insert(schema.checkoutSessions).values({
+      id: "sess-sub-1",
+      userId: "user-confirm-1",
+      idempotencyKey: "idem-sub-1",
+      cartSnapshot: [{ variantId: "var-c1", productId: "prod-c1", sku: "DF-001", name: "Dog Food Premium", quantity: 1, unitPrice: 5000, lineTotal: 5000 }],
+      address: { recipientName: "Confirm User", street: "Test St", number: "1", commune: "Santiago", region: "RM", phone: "+56912345678" },
+      shippingOptionId: "standard",
+      shippingCost: 3990,
+      status: "payment_pending",
+      expiresAt,
+      subscriptionIntent: { variantId: "var-c1", productId: "prod-c1", frequencyDays: 30, discountPercent: 10 },
+    });
+
+    const { confirmOrderWithDb } = await import("@/app/actions/checkout/confirm-order");
+
+    const result = await confirmOrderWithDb(db as never, {
+      sessionId: "sess-sub-1",
+      gatewayToken: "approve",
+      userId: "user-confirm-1",
+      userEmail: "confirm@test.cl",
+      userName: "Confirm User",
+    });
+
+    expect(result.ok).toBe(true);
+
+    // Verify subscription row was created
+    const subs = await db.select().from(schema.subscriptions);
+    expect(subs).toHaveLength(1);
+    expect(subs[0].userId).toBe("user-confirm-1");
+    expect(subs[0].productId).toBe("prod-c1");
+    expect(subs[0].frequencyDays).toBe(30);
+    expect(subs[0].status).toBe("active");
+  });
+
+  it("SP-S5: gateway fail → no subscription row created", async () => {
+    const db = await createTestDb();
+    await seedBase(db);
+
+    await db.update(schema.products).set({
+      subscriptionEnabled: true,
+      subscriptionFrequencies: [30],
+      subscriptionDiscountPercent: 10,
+    });
+
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+    await db.insert(schema.checkoutSessions).values({
+      id: "sess-sub-reject-1",
+      userId: "user-confirm-1",
+      idempotencyKey: "idem-sub-reject-1",
+      cartSnapshot: [{ variantId: "var-c1", productId: "prod-c1", sku: "DF-001", name: "Dog Food Premium", quantity: 1, unitPrice: 5000, lineTotal: 5000 }],
+      address: { recipientName: "Confirm User", street: "Test St", number: "1", commune: "Santiago", region: "RM", phone: "+56912345678" },
+      shippingOptionId: "standard",
+      shippingCost: 3990,
+      status: "payment_pending",
+      expiresAt,
+      subscriptionIntent: { variantId: "var-c1", productId: "prod-c1", frequencyDays: 30, discountPercent: 10 },
+    });
+
+    const { confirmOrderWithDb } = await import("@/app/actions/checkout/confirm-order");
+
+    const result = await confirmOrderWithDb(db as never, {
+      sessionId: "sess-sub-reject-1",
+      gatewayToken: "REJECT_TEST",
+      userId: "user-confirm-1",
+      userEmail: "confirm@test.cl",
+      userName: "Confirm User",
+    });
+
+    expect(result.ok).toBe(false);
+
+    // No subscription row
+    const subs = await db.select().from(schema.subscriptions);
+    expect(subs).toHaveLength(0);
+  });
+
+  it("SP-S8: no intent → no subscription row, full price", async () => {
+    const db = await createTestDb();
+    await seedBase(db);
+
+    const { confirmOrderWithDb } = await import("@/app/actions/checkout/confirm-order");
+
+    const result = await confirmOrderWithDb(db as never, {
+      sessionId: "sess-confirm-1",
+      gatewayToken: "approve",
+      userId: "user-confirm-1",
+      userEmail: "confirm@test.cl",
+      userName: "Confirm User",
+    });
+
+    expect(result.ok).toBe(true);
+
+    // No subscription row
+    const subs = await db.select().from(schema.subscriptions);
+    expect(subs).toHaveLength(0);
   });
 
   // Task 5.2 RED: MercadoPago dispatch via registry
