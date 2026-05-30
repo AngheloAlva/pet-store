@@ -3,6 +3,8 @@
  * Pure function: no React, no DB, no side effects.
  */
 
+import { escapeHtml, safeHttpUrl } from "@/lib/notifications/escape";
+
 export interface Data {
   userName: string;
   productName: string;
@@ -23,6 +25,11 @@ function formatDate(date: Date | string): string {
 }
 
 export function render(data: Data): { subject: string; html: string; text: string } {
+  const safeUserName = escapeHtml(data.userName);
+  const safeProductName = escapeHtml(data.productName);
+  const safeVariantName = data.variantName ? escapeHtml(data.variantName) : undefined;
+  const safeManageUrl = data.manageUrl ? safeHttpUrl(data.manageUrl) : undefined;
+
   const subject = `Recordatorio: tu suscripción de ${data.productName} se cobra el ${formatDate(data.nextChargeAt)}`;
 
   const text = [
@@ -34,7 +41,7 @@ export function render(data: Data): { subject: string; html: string; text: strin
     `Frecuencia: Cada ${data.frequencyDays} días`,
     `Precio con descuento: ${formatCLP(data.discountedPrice)}`,
     "",
-    data.manageUrl ? `Gestiona tu suscripción en: ${data.manageUrl}` : "",
+    safeManageUrl ? `Gestiona tu suscripción en: ${safeManageUrl}` : "",
     "",
     "¡Gracias por tu preferencia!",
   ]
@@ -55,12 +62,13 @@ export function render(data: Data): { subject: string; html: string; text: strin
           </tr>
           <tr>
             <td style="padding: 32px;">
-              <p style="font-size: 16px; color: #111827; margin: 0 0 16px;">Hola <strong>${data.userName}</strong>,</p>
-              <p style="font-size: 15px; color: #374151; margin: 0 0 8px;">Tu suscripción de <strong>${data.productName}</strong> se cobrará próximamente.</p>
+              <p style="font-size: 16px; color: #111827; margin: 0 0 16px;">Hola <strong>${safeUserName}</strong>,</p>
+              <p style="font-size: 15px; color: #374151; margin: 0 0 8px;">Tu suscripción de <strong>${safeProductName}</strong> se cobrará próximamente.</p>
+              ${safeVariantName ? `<p style="font-size: 14px; color: #6b7280; margin: 0 0 8px;">Variante: ${safeVariantName}</p>` : ""}
               <p style="font-size: 14px; color: #6b7280; margin: 0 0 8px;">Fecha de cobro: <strong>${formatDate(data.nextChargeAt)}</strong></p>
               <p style="font-size: 14px; color: #6b7280; margin: 0 0 8px;">Frecuencia: Cada ${data.frequencyDays} días</p>
               <p style="font-size: 14px; color: #6b7280; margin: 0 0 24px;">Precio con descuento: <strong>${formatCLP(data.discountedPrice)}</strong></p>
-              ${data.manageUrl ? `<p style="font-size: 14px; color: #374151;"><a href="${data.manageUrl}" style="color: #2563eb;">Gestionar suscripción</a></p>` : ""}
+              ${safeManageUrl ? `<p style="font-size: 14px; color: #374151;"><a href="${safeManageUrl}" style="color: #2563eb;">Gestionar suscripción</a></p>` : ""}
               <p style="font-size: 14px; color: #6b7280; margin: 0;">¡Gracias por tu preferencia!</p>
             </td>
           </tr>

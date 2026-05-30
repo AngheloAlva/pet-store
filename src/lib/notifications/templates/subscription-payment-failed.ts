@@ -3,6 +3,8 @@
  * Pure function: no React, no DB, no side effects.
  */
 
+import { escapeHtml } from "@/lib/notifications/escape";
+
 export interface Data {
   userName: string;
   productName: string;
@@ -10,6 +12,9 @@ export interface Data {
 }
 
 export function render(data: Data): { subject: string; html: string; text: string } {
+  const safeUserName = escapeHtml(data.userName);
+  const safeProductName = escapeHtml(data.productName);
+
   const subject = `Problema con el cobro de tu suscripción de ${data.productName}`;
 
   const text = [
@@ -40,8 +45,8 @@ export function render(data: Data): { subject: string; html: string; text: strin
           </tr>
           <tr>
             <td style="padding: 32px;">
-              <p style="font-size: 16px; color: #111827; margin: 0 0 16px;">Hola <strong>${data.userName}</strong>,</p>
-              <p style="font-size: 15px; color: #374151; margin: 0 0 8px;">Lamentablemente no pudimos procesar el cobro de tu suscripción de <strong>${data.productName}</strong>.</p>
+              <p style="font-size: 16px; color: #111827; margin: 0 0 16px;">Hola <strong>${safeUserName}</strong>,</p>
+              <p style="font-size: 15px; color: #374151; margin: 0 0 8px;">Lamentablemente no pudimos procesar el cobro de tu suscripción de <strong>${safeProductName}</strong>.</p>
               <p style="font-size: 14px; color: #6b7280; margin: 0 0 16px;">Tu suscripción ha sido pausada temporalmente.</p>
               <p style="font-size: 14px; color: #374151; margin: 0 0 8px;"><strong>Próximos pasos:</strong></p>
               <ul style="font-size: 14px; color: #374151; margin: 0 0 24px; padding-left: 20px;">
