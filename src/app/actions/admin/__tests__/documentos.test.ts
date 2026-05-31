@@ -2,6 +2,7 @@
  * T-26 [RED] — listDocumentsWithDb filters
  * T-29 [RED] — createCreditNoteWithDb
  * T-31 [RED] — createDebitNoteWithDb
+ * SEC-DOC-1..4 [RED] — admin auth guard + Zod validation on public wrappers
  * Spec: A-1, A-2, N-1..N-5, INV-2, INV-5
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
@@ -437,5 +438,198 @@ describe("createDebitNoteWithDb — T-31 RED", () => {
       where: (d, { eq }) => eq(d.referenceDteId, "dte-nd-3"),
     });
     expect(nd!.net! + nd!.taxAmount!).toBe(nd!.total);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// SEC-DOC-1..4 — Admin auth guard + Zod validation on public wrappers
+// Tests the PUBLIC wrappers (listDocuments, createCreditNote, createDebitNote)
+// which must self-guard via getCurrentUser (layout role-gate is NOT enough).
+// ---------------------------------------------------------------------------
+
+import { getCurrentUser } from "@/lib/session";
+
+const mockGetCurrentUser = getCurrentUser as ReturnType<typeof vi.fn>;
+
+describe("listDocuments — auth guard (SEC-DOC-1)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("SEC-DOC-1a: unauthenticated caller is rejected with UNAUTHENTICATED", async () => {
+    mockGetCurrentUser.mockResolvedValue(null);
+
+    const { listDocuments } = await import("@/app/actions/admin/documentos");
+    const result = await listDocuments({});
+
+    expect("ok" in result && result.ok === false).toBe(true);
+    expect((result as { ok: false; code: string }).code).toBe("UNAUTHENTICATED");
+  });
+
+  it("SEC-DOC-1b: non-admin caller is rejected with FORBIDDEN", async () => {
+    mockGetCurrentUser.mockResolvedValue({
+      id: "cust-1",
+      email: "c@test.cl",
+      name: "Customer",
+      role: "customer",
+    });
+
+    const { listDocuments } = await import("@/app/actions/admin/documentos");
+    const result = await listDocuments({});
+
+    expect("ok" in result && result.ok === false).toBe(true);
+    expect((result as { ok: false; code: string }).code).toBe("FORBIDDEN");
+  });
+
+  it("SEC-DOC-1c: invalid filter input (invalid type string) is rejected with VALIDATION", async () => {
+    mockGetCurrentUser.mockResolvedValue({
+      id: "admin-1",
+      email: "a@test.cl",
+      name: "Admin",
+      role: "admin",
+    });
+
+    const { listDocuments } = await import("@/app/actions/admin/documentos");
+    const result = await listDocuments({ type: "factura_invalida" as never });
+
+    expect("ok" in result && result.ok === false).toBe(true);
+    expect((result as { ok: false; code: string }).code).toBe("VALIDATION");
+  });
+
+  it("SEC-DOC-1d: negative folioFrom is rejected with VALIDATION", async () => {
+    mockGetCurrentUser.mockResolvedValue({
+      id: "admin-1",
+      email: "a@test.cl",
+      name: "Admin",
+      role: "admin",
+    });
+
+    const { listDocuments } = await import("@/app/actions/admin/documentos");
+    const result = await listDocuments({ folioFrom: -5 });
+
+    expect("ok" in result && result.ok === false).toBe(true);
+    expect((result as { ok: false; code: string }).code).toBe("VALIDATION");
+  });
+});
+
+describe("createCreditNote — auth guard (SEC-DOC-2)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("SEC-DOC-2a: unauthenticated caller is rejected with UNAUTHENTICATED", async () => {
+    mockGetCurrentUser.mockResolvedValue(null);
+
+    const { createCreditNote } = await import("@/app/actions/admin/documentos");
+    const result = await createCreditNote({ dteId: "x", reason: "r" });
+
+    expect(result.ok).toBe(false);
+    expect((result as { ok: false; code: string }).code).toBe("UNAUTHENTICATED");
+  });
+
+  it("SEC-DOC-2b: non-admin caller is rejected with FORBIDDEN", async () => {
+    mockGetCurrentUser.mockResolvedValue({
+      id: "cust-1",
+      email: "c@test.cl",
+      name: "Customer",
+      role: "customer",
+    });
+
+    const { createCreditNote } = await import("@/app/actions/admin/documentos");
+    const result = await createCreditNote({ dteId: "x", reason: "r" });
+
+    expect(result.ok).toBe(false);
+    expect((result as { ok: false; code: string }).code).toBe("FORBIDDEN");
+  });
+
+  it("SEC-DOC-2c: negative amount is rejected with VALIDATION", async () => {
+    mockGetCurrentUser.mockResolvedValue({
+      id: "admin-1",
+      email: "a@test.cl",
+      name: "Admin",
+      role: "admin",
+    });
+
+    const { createCreditNote } = await import("@/app/actions/admin/documentos");
+    const result = await createCreditNote({ dteId: "x", reason: "r", amount: -100 });
+
+    expect(result.ok).toBe(false);
+    expect((result as { ok: false; code: string }).code).toBe("VALIDATION");
+  });
+
+  it("SEC-DOC-2d: zero amount is rejected with VALIDATION", async () => {
+    mockGetCurrentUser.mockResolvedValue({
+      id: "admin-1",
+      email: "a@test.cl",
+      name: "Admin",
+      role: "admin",
+    });
+
+    const { createCreditNote } = await import("@/app/actions/admin/documentos");
+    const result = await createCreditNote({ dteId: "x", reason: "r", amount: 0 });
+
+    expect(result.ok).toBe(false);
+    expect((result as { ok: false; code: string }).code).toBe("VALIDATION");
+  });
+});
+
+describe("createDebitNote — auth guard (SEC-DOC-3)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("SEC-DOC-3a: unauthenticated caller is rejected with UNAUTHENTICATED", async () => {
+    mockGetCurrentUser.mockResolvedValue(null);
+
+    const { createDebitNote } = await import("@/app/actions/admin/documentos");
+    const result = await createDebitNote({ dteId: "x", reason: "r", amount: 1000 });
+
+    expect(result.ok).toBe(false);
+    expect((result as { ok: false; code: string }).code).toBe("UNAUTHENTICATED");
+  });
+
+  it("SEC-DOC-3b: non-admin caller is rejected with FORBIDDEN", async () => {
+    mockGetCurrentUser.mockResolvedValue({
+      id: "cust-1",
+      email: "c@test.cl",
+      name: "Customer",
+      role: "customer",
+    });
+
+    const { createDebitNote } = await import("@/app/actions/admin/documentos");
+    const result = await createDebitNote({ dteId: "x", reason: "r", amount: 1000 });
+
+    expect(result.ok).toBe(false);
+    expect((result as { ok: false; code: string }).code).toBe("FORBIDDEN");
+  });
+
+  it("SEC-DOC-3c: negative amount is rejected with VALIDATION", async () => {
+    mockGetCurrentUser.mockResolvedValue({
+      id: "admin-1",
+      email: "a@test.cl",
+      name: "Admin",
+      role: "admin",
+    });
+
+    const { createDebitNote } = await import("@/app/actions/admin/documentos");
+    const result = await createDebitNote({ dteId: "x", reason: "r", amount: -500 });
+
+    expect(result.ok).toBe(false);
+    expect((result as { ok: false; code: string }).code).toBe("VALIDATION");
+  });
+
+  it("SEC-DOC-3d: NaN amount is rejected with VALIDATION", async () => {
+    mockGetCurrentUser.mockResolvedValue({
+      id: "admin-1",
+      email: "a@test.cl",
+      name: "Admin",
+      role: "admin",
+    });
+
+    const { createDebitNote } = await import("@/app/actions/admin/documentos");
+    const result = await createDebitNote({ dteId: "x", reason: "r", amount: NaN });
+
+    expect(result.ok).toBe(false);
+    expect((result as { ok: false; code: string }).code).toBe("VALIDATION");
   });
 });

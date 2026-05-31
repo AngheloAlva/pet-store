@@ -7,8 +7,13 @@
  * T-28 [GREEN] listDocumentsWithDb    — filtered list + period totals
  * T-30 [GREEN] createCreditNoteWithDb — NC (61) with optional total/partial anulación
  * T-32 [GREEN] createDebitNoteWithDb  — ND (56) al alza, original unchanged
+ *
+ * SEC: Public wrappers self-guard via getCurrentUser() + role check.
+ * Admin layout role-gate protects page rendering only; server actions are
+ * directly-invocable POST endpoints and MUST guard themselves.
  */
 import { db } from "@/db";
+import { getCurrentUser } from "@/lib/session";
 import {
   dteDocuments,
   orders,
@@ -21,6 +26,11 @@ import { computeIva } from "@/lib/dte/iva";
 import { revalidatePath } from "next/cache";
 import { randomUUID } from "node:crypto";
 
+import {
+  listDocumentsSchema,
+  createCreditNoteSchema,
+  createDebitNoteSchema,
+} from "./documentos.schema";
 import type { ListDocumentsFilters, CreateCreditNoteInput, CreateDebitNoteInput } from "./documentos.schema";
 
 // ---------------------------------------------------------------------------
@@ -52,18 +62,23 @@ export interface PeriodTotals {
   totalAmount: number;
 }
 
-export interface ListDocumentsResult {
+export interface ListDocumentsData {
   documents: DocumentListItem[];
   totals: PeriodTotals;
 }
 
+/** @deprecated use ListDocumentsData; kept for internal *WithDb return compat */
+export type ListDocumentsResult =
+  | { ok: true; documents: DocumentListItem[]; totals: PeriodTotals }
+  | { ok: false; code: "UNAUTHENTICATED" | "FORBIDDEN" | "VALIDATION"; message: string };
+
 export type CreateCreditNoteResult =
   | { ok: true; ncId: string }
-  | { ok: false; code: "NOT_FOUND" | "INVALID_INPUT"; message: string };
+  | { ok: false; code: "NOT_FOUND" | "INVALID_INPUT" | "UNAUTHENTICATED" | "FORBIDDEN" | "VALIDATION"; message: string };
 
 export type CreateDebitNoteResult =
   | { ok: true; ndId: string }
-  | { ok: false; code: "NOT_FOUND" | "INVALID_INPUT"; message: string };
+  | { ok: false; code: "NOT_FOUND" | "INVALID_INPUT" | "UNAUTHENTICATED" | "FORBIDDEN" | "VALIDATION"; message: string };
 
 // ---------------------------------------------------------------------------
 // T-28 [GREEN] listDocumentsWithDb
@@ -73,7 +88,7 @@ export type CreateDebitNoteResult =
 export async function listDocumentsWithDb(
   database: AnyDb,
   filters: ListDocumentsFilters
-): Promise<ListDocumentsResult> {
+): Promise<ListDocumentsData> {
   // Build WHERE conditions
   const conditions = [];
 
@@ -148,10 +163,21 @@ export async function listDocumentsWithDb(
 }
 
 // Public action wrapper (server action)
+// SEC: admin guard + Zod validation before delegating to *WithDb.
 export async function listDocuments(
-  filters: ListDocumentsFilters
+  filters: unknown
 ): Promise<ListDocumentsResult> {
-  return listDocumentsWithDb(db, filters);
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, code: "UNAUTHENTICATED", message: "Not authenticated" };
+  if (user.role !== "admin") return { ok: false, code: "FORBIDDEN", message: "Forbidden" };
+
+  const parsed = listDocumentsSchema.safeParse(filters);
+  if (!parsed.success) {
+    return { ok: false, code: "VALIDATION", message: JSON.stringify(parsed.error.flatten()) };
+  }
+
+  const data = await listDocumentsWithDb(db, parsed.data);
+  return { ok: true, ...data };
 }
 
 // ---------------------------------------------------------------------------
@@ -230,10 +256,20 @@ export async function createCreditNoteWithDb(
 }
 
 // Public action wrapper
+// SEC: admin guard + Zod validation before delegating to *WithDb.
 export async function createCreditNote(
-  input: CreateCreditNoteInput
+  input: unknown
 ): Promise<CreateCreditNoteResult> {
-  return createCreditNoteWithDb(db, input);
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, code: "UNAUTHENTICATED", message: "Not authenticated" };
+  if (user.role !== "admin") return { ok: false, code: "FORBIDDEN", message: "Forbidden" };
+
+  const parsed = createCreditNoteSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, code: "VALIDATION", message: JSON.stringify(parsed.error.flatten()) };
+  }
+
+  return createCreditNoteWithDb(db, parsed.data);
 }
 
 // ---------------------------------------------------------------------------
@@ -299,8 +335,18 @@ export async function createDebitNoteWithDb(
 }
 
 // Public action wrapper
+// SEC: admin guard + Zod validation before delegating to *WithDb.
 export async function createDebitNote(
-  input: CreateDebitNoteInput
+  input: unknown
 ): Promise<CreateDebitNoteResult> {
-  return createDebitNoteWithDb(db, input);
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, code: "UNAUTHENTICATED", message: "Not authenticated" };
+  if (user.role !== "admin") return { ok: false, code: "FORBIDDEN", message: "Forbidden" };
+
+  const parsed = createDebitNoteSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, code: "VALIDATION", message: JSON.stringify(parsed.error.flatten()) };
+  }
+
+  return createDebitNoteWithDb(db, parsed.data);
 }
