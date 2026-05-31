@@ -12,20 +12,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/session";
 import { db } from "@/db";
 import { getLibroVentasWithDb } from "@/app/actions/cuenta/documentos";
+import { buildCsvRow } from "@/lib/csv";
 
 // CSV column headers — SII format (spec L-1-b)
 const CSV_HEADERS = ["folio", "tipo", "fecha", "rutReceptor", "razonSocial", "neto", "iva", "total"];
 
 function rowToCsv(row: Record<string, unknown>): string {
-  return CSV_HEADERS.map((col) => {
-    const val = row[col] ?? "";
-    const str = String(val);
-    // Escape strings with commas or quotes
-    if (str.includes(",") || str.includes('"') || str.includes("\n")) {
-      return `"${str.replace(/"/g, '""')}"`;
-    }
-    return str;
-  }).join(",");
+  return buildCsvRow(row, CSV_HEADERS);
 }
 
 export async function GET(req: NextRequest) {
