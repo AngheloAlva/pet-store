@@ -15,6 +15,7 @@ import { DteDocument } from "@/components/dte/dte-document";
 import type { DteType } from "@/db/schema";
 import type { DteReceiver, DTEItem } from "@/lib/dte/provider";
 import { AnularClient } from "./anular-client";
+import { DebitoClient } from "./debito-client";
 
 // ---------------------------------------------------------------------------
 // Type label map
@@ -78,6 +79,12 @@ export default async function AdminDocumentoDetailPage({
 
   const typeLabel = DTE_TYPE_LABEL[dte.type ?? ""] ?? dte.type ?? "DTE";
   const isAnulable =
+    dte.status === "emitido" &&
+    dte.type !== "nota_credito" &&
+    dte.type !== "nota_debito";
+
+  // ND can be issued for any emitido boleta/factura (not on NC/ND themselves)
+  const isDebitIssuable =
     dte.status === "emitido" &&
     dte.type !== "nota_credito" &&
     dte.type !== "nota_debito";
@@ -206,6 +213,11 @@ export default async function AdminDocumentoDetailPage({
         {/* Anular (spec A-3) — only for emitido, non-NC/ND */}
         {isAnulable && (
           <AnularClient dteId={dte.id} dteTotal={dte.total ?? 0} />
+        )}
+
+        {/* Nota de Débito (spec N-5, T-36-opt) — only for emitido boleta/factura */}
+        {isDebitIssuable && (
+          <DebitoClient dteId={dte.id} />
         )}
       </div>
 

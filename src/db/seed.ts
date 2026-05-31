@@ -22,6 +22,7 @@ import {
   demoShipments,
 } from "./seed-data/demo-orders";
 import { demoSubscriptions } from "./seed-data/demo-subscriptions";
+import { demoDteDocuments, demoDteFolioCounters } from "./seed-data/demo-dte";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 type Db = PgliteDatabase<typeof schema>;
@@ -481,6 +482,30 @@ export async function applySeed(db: Db): Promise<void> {
         status: schema.subscriptions.status,
         nextChargeAt: schema.subscriptions.nextChargeAt,
         updatedAt: schema.subscriptions.updatedAt,
+      },
+    });
+
+  // --- demo DTE folio counters (F3.6 T-44) ---
+  // Seed counters BEFORE documents so getFolioWithDb() continues from correct offset.
+  await db
+    .insert(schema.dtefolioCounters)
+    .values(demoDteFolioCounters)
+    .onConflictDoUpdate({
+      target: schema.dtefolioCounters.type,
+      set: { lastFolio: schema.dtefolioCounters.lastFolio },
+    });
+
+  // --- demo DTE documents (F3.6 T-44) ---
+  // Seeded AFTER orders (FK: orderId → orders.id) and folio counters.
+  await db
+    .insert(schema.dteDocuments)
+    .values(demoDteDocuments)
+    .onConflictDoUpdate({
+      target: schema.dteDocuments.id,
+      set: {
+        status: schema.dteDocuments.status,
+        cancelledAt: schema.dteDocuments.cancelledAt,
+        cancellationReason: schema.dteDocuments.cancellationReason,
       },
     });
 }
