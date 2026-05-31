@@ -13,6 +13,7 @@ import {
   Newspaper,
   ShoppingBag,
   Gear,
+  FileText,
 } from "@phosphor-icons/react/dist/ssr";
 
 const NAV_ITEMS = [
@@ -27,6 +28,7 @@ const NAV_ITEMS = [
   { label: "Puntos", href: "/admin/puntos", icon: Star, disabled: false },
   { label: "Blog", href: "/admin/blog", icon: Newspaper, disabled: false },
   { label: "Pedidos", href: "/admin/pedidos", icon: ShoppingBag, disabled: false },
+  { label: "Documentos", href: "/admin/documentos", icon: FileText, disabled: false },
   { label: "Configuración", href: "/admin/configuracion", icon: Gear, disabled: false },
   { label: "Usuarios", href: "/admin/usuarios", icon: Users, disabled: false },
 ] as const;
