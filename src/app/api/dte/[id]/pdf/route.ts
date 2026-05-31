@@ -3,13 +3,22 @@
  * Returns the DTE document as a standalone HTML attachment.
  * Spec: P-1, P-3
  *
+ * Authorization rules (IDOR fix):
+ *  - Admins may download ANY DTE.
+ *  - Non-admin users may only download a DTE whose linked order belongs to them:
+ *      dte.orderId → orders.userId === user.id
+ *  - DTEs without an orderId (NC/ND — nota_credito 61 / nota_debito 56) are
+ *    admin-only artifacts; non-admin requesters receive 403.
+ *  - receiverRut MUST NOT be used for ownership: boletas fall back to the
+ *    generic consumer RUT 66666666-6, which is shared across all boletas.
+ *
  * The injectable getDtePdfWithDb function is exported for unit testing.
  */
 import { renderToStaticMarkup } from "react-dom/server";
 import React from "react";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db } from "@/db";
-import { dteDocuments } from "@/db/schema";
+import { dteDocuments, orders } from "@/db/schema";
 import { getCurrentUser } from "@/lib/session";
 import { DteDocument } from "@/components/dte/dte-document";
 import type { DteReceiver, DTEItem } from "@/lib/dte/provider";
@@ -42,6 +51,25 @@ export async function getDtePdfWithDb(
 
   if (!dte) {
     return new Response("DTE not found", { status: 404 });
+  }
+
+  // Authorization: admins may access any DTE; non-admins must own it via order.
+  if (user.role !== "admin") {
+    // DTEs without an orderId (NC/ND) are admin-only artifacts.
+    if (!dte.orderId) {
+      return new Response("Forbidden", { status: 403 });
+    }
+
+    // Verify ownership: order.userId must match the requesting user.
+    const ownerRow = await database
+      .select({ userId: orders.userId })
+      .from(orders)
+      .where(and(eq(orders.id, dte.orderId), eq(orders.userId, user.id)))
+      .limit(1);
+
+    if (ownerRow.length === 0) {
+      return new Response("Forbidden", { status: 403 });
+    }
   }
 
   // Render DTE to static HTML string
