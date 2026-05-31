@@ -14,13 +14,11 @@
  *
  * The injectable getDtePdfWithDb function is exported for unit testing.
  */
-import { renderToStaticMarkup } from "react-dom/server";
-import React from "react";
 import { eq, and } from "drizzle-orm";
 import { db } from "@/db";
 import { dteDocuments, orders } from "@/db/schema";
 import { getCurrentUser } from "@/lib/session";
-import { DteDocument } from "@/components/dte/dte-document";
+import { renderDteHtml } from "@/lib/dte/render-html";
 import type { DteReceiver, DTEItem } from "@/lib/dte/provider";
 import type { SessionUser } from "@/types/session";
 
@@ -72,7 +70,7 @@ export async function getDtePdfWithDb(
     }
   }
 
-  // Render DTE to static HTML string
+  // Build receiver and items for the HTML render
   const receiver: DteReceiver = {
     rut: dte.receiverRut ?? "66666666-6",
     name: dte.receiverName ?? "Consumidor Final",
@@ -92,22 +90,20 @@ export async function getDtePdfWithDb(
     },
   ];
 
-  const html = renderToStaticMarkup(
-    React.createElement(DteDocument, {
-      id: dte.id,
-      folio: dte.folio ?? 0,
-      type: (dte.type ?? "boleta") as "boleta" | "factura" | "nota_credito" | "nota_debito" | "guia",
-      documentCode: dte.documentCode ?? 39,
-      issuedAt: dte.issuedAt ?? new Date(),
-      issuerRut: dte.issuerRut ?? "76000000-0",
-      receiver,
-      items,
-      net: dte.net ?? 0,
-      taxAmount: dte.taxAmount ?? 0,
-      total: dte.total ?? 0,
-      stamp: dte.stamp ?? "",
-    })
-  );
+  const html = renderDteHtml({
+    id: dte.id,
+    folio: dte.folio ?? 0,
+    type: (dte.type ?? "boleta") as "boleta" | "factura" | "nota_credito" | "nota_debito" | "guia",
+    documentCode: dte.documentCode ?? 39,
+    issuedAt: dte.issuedAt ?? new Date(),
+    issuerRut: dte.issuerRut ?? "76000000-0",
+    receiver,
+    items,
+    net: dte.net ?? 0,
+    taxAmount: dte.taxAmount ?? 0,
+    total: dte.total ?? 0,
+    stamp: dte.stamp ?? "",
+  });
 
   const typeSlug = dte.type ?? "dte";
   const folio = dte.folio ?? 0;
